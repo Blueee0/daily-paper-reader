@@ -1,5 +1,21 @@
 // Docsify 配置与公共插件（评论区 + Zotero 元数据）
 // 注意：侧边栏由 app/dpr-sidebar.js 自建接管，这里不再让 docsify 渲染 _sidebar.md
+
+// 归一化 docsify 的 route.file：
+// 以 `index.html#/路由` 方式打开站点时（常见于本地静态服务预览），docsify 4.13
+// 会把相对 basePath 'docs/' 解析成 "/docs/<路由>" 绝对路径，导致论文路由判定
+// 失效（front matter 不解析、操作栏不挂载）；生产环境为目录 URL，无此前缀。
+// 统一剥掉前导 "/" 与 "docs/" 前缀，两种运行方式得到一致的路由文件路径。
+window.dprNormalizeRouteFile = function (file) {
+  let f = String(file || '').trim();
+  if (!f) return '';
+  f = f.replace(/^\/+/, '');
+  if (f.toLowerCase().indexOf('docs/') === 0) {
+    f = f.slice(5);
+  }
+  return f;
+};
+
 window.$docsify = {
   name: 'Daily Paper Reader',
   repo: '',
@@ -31,7 +47,9 @@ window.$docsify = {
 
       // 1. 解析当前文章 ID (简单用文件名作为 ID)
       const getPaperId = () => {
-        return vm.route.file.replace('.md', '');
+        return window
+          .dprNormalizeRouteFile(vm.route.file)
+          .replace('.md', '');
       };
 
       const metaFallbacks = {
@@ -1547,7 +1565,7 @@ window.$docsify = {
 
       // 侧边栏/正文的论文页标题条：英文右侧，中文左侧，中间竖线
       const isPaperRouteFile = (file) => {
-        const f = String(file || '');
+        const f = window.dprNormalizeRouteFile(file);
         return (
           /^(?:\d{6}\/\d{2}|\d{8}-\d{8})\/(?!README\.md$).+\.md$/i.test(f) ||
           /^conference\/[^/]+\/(?!README\.md$).+\.md$/i.test(f)
@@ -1555,7 +1573,7 @@ window.$docsify = {
       };
 
       const isReportRouteFile = (file) => {
-        const f = String(file || '');
+        const f = window.dprNormalizeRouteFile(file);
         return /^(?:\d{6}\/\d{2}|\d{8}-\d{8})\/README\.md$/i.test(f);
       };
 
@@ -1674,7 +1692,7 @@ window.$docsify = {
       };
 
       const applyPaperTitleBar = () => {
-        const file = vm && vm.route ? vm.route.file : '';
+        const file = window.dprNormalizeRouteFile(vm && vm.route ? vm.route.file : '');
         if (!isPaperRouteFile(file)) {
           return;
         }
@@ -1784,7 +1802,7 @@ window.$docsify = {
       };
 
       const applyPaperActionBar = () => {
-        const file = vm && vm.route ? vm.route.file : '';
+        const file = window.dprNormalizeRouteFile(vm && vm.route ? vm.route.file : '');
         if (!isPaperRouteFile(file)) return;
         const section = document.querySelector('.markdown-section');
         if (!section) return;
@@ -1877,7 +1895,7 @@ window.$docsify = {
             () => {
               const deferredDeep = window.DPRDeepReading;
               const id = getPaperId();
-              const file = vm && vm.route ? vm.route.file : '';
+              const file = window.dprNormalizeRouteFile(vm && vm.route ? vm.route.file : '');
               if (deferredDeep && typeof deferredDeep.mountForPage === 'function' && isPaperRouteFile(file)) {
                 deferredDeep.mountForPage({ paperId: id, routeFile: file, meta: latestPaperMeta });
               }
@@ -3405,7 +3423,7 @@ window.$docsify = {
 
       // --- Docsify beforeEach 钩子：解析 front matter ---
       hook.beforeEach(function (content) {
-        const file = vm && vm.route ? vm.route.file : '';
+        const file = window.dprNormalizeRouteFile(vm && vm.route ? vm.route.file : '');
         // 只对论文页面处理
         if (!isPaperRouteFile(file)) {
           latestPaperRawMarkdown = '';
@@ -3432,7 +3450,7 @@ window.$docsify = {
           const paperId = getPaperId();
           const routePath = vm.route && vm.route.path ? vm.route.path : '';
           const lowerId = (paperId || '').toLowerCase();
-          const file = vm && vm.route ? vm.route.file : '';
+          const file = window.dprNormalizeRouteFile(vm && vm.route ? vm.route.file : '');
           const isHomePage =
             !paperId ||
             lowerId === 'readme' ||
@@ -3535,7 +3553,7 @@ window.$docsify = {
           lowerId === 'readme' ||
           routePath === '/' ||
           routePath === '';
-        const file = vm && vm.route ? vm.route.file : '';
+        const file = window.dprNormalizeRouteFile(vm && vm.route ? vm.route.file : '');
         const isReportPage = isReportRouteFile(file);
         const isPaperPage = isPaperRouteFile(file);
         const isLandingLikePage = isHomePage || isReportPage;
@@ -3673,7 +3691,7 @@ window.$docsify = {
         setTimeout(() => {
           updateZoteroMetaFromPage(
             paperId,
-            vm.route.file,
+            window.dprNormalizeRouteFile(vm.route.file),
             latestPaperRawMarkdown,
           );
         }, 1); // 延迟执行，等待 DOM 渲染完毕

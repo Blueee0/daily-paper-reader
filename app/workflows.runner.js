@@ -1792,9 +1792,22 @@ window.DPRWorkflowRunner = (function () {
     const summary = await getLatestDailyRunSummary(true);
     if (!mount.isConnected) return;
     if (!summary) {
+      const hasToken = !!loadGithubToken();
       mount.innerHTML =
-        '<span style="color:#999;">暂无法读取流水线状态（仓库不可见或达到匿名接口限流）。</span>';
+        `<span style="color:#999;">流水线状态暂时读取不到（匿名接口限流 60 次/小时）。` +
+        `<button type="button" id="dpr-home-status-retry" class="arxiv-tool-btn" style="padding:1px 8px; font-size:12px; margin:0 4px;">重试</button>` +
+        `${hasToken ? '' : '解锁密钥后可实时读取。'}60 秒后也会自动重试。</span>`;
       mount.dataset.loaded = '0';
+      const retryBtn = document.getElementById('dpr-home-status-retry');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          mountHomeStatusChip();
+        });
+      }
+      clearTimeout(mountHomeStatusChip._retryTimer);
+      mountHomeStatusChip._retryTimer = setTimeout(() => {
+        if (mount.isConnected) mountHomeStatusChip();
+      }, 60000);
       return;
     }
     const color = statusColorFor(summary);
