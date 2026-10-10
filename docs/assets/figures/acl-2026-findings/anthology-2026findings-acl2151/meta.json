@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-001.webp",
+      "caption": "",
+      "page": 2,
+      "index": 1,
+      "width": 4085,
+      "height": 2320
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-002.webp",
+      "caption": "",
+      "page": 4,
+      "index": 2,
+      "width": 6400,
+      "height": 3600
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-003.webp",
+      "caption": "",
+      "page": 6,
+      "index": 3,
+      "width": 1811,
+      "height": 1632
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-004.webp",
+      "caption": "",
+      "page": 11,
+      "index": 4,
+      "width": 2295,
+      "height": 1219
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-005.webp",
+      "caption": "",
+      "page": 12,
+      "index": 5,
+      "width": 4400,
+      "height": 3115
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-006.webp",
+      "caption": "",
+      "page": 13,
+      "index": 6,
+      "width": 2448,
+      "height": 1203
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-007.webp",
+      "caption": "",
+      "page": 13,
+      "index": 7,
+      "width": 2448,
+      "height": 1203
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-008.webp",
+      "caption": "",
+      "page": 13,
+      "index": 8,
+      "width": 2448,
+      "height": 1203
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-009.webp",
+      "caption": "",
+      "page": 13,
+      "index": 9,
+      "width": 2448,
+      "height": 1203
+    },
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2151/fig-010.webp",
+      "caption": "",
+      "page": 13,
+      "index": 10,
+      "width": 2448,
+      "height": 1203
+    }
+  ]
+}

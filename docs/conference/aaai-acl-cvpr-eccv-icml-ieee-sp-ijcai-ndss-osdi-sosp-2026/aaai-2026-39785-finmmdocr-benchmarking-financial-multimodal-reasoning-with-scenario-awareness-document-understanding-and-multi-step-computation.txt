@@ -1,0 +1,319 @@
+Title: FinMMDocR: Benchmarking Financial Multimodal Reasoning with Scenario Awareness, Document Understanding, and Multi-Step Computation
+
+URL Source: https://ojs.aaai.org/index.php/AAAI/article/download/39785/43746
+
+Number of Pages: 9
+
+Markdown Content:
+# FinMMDocR: Benchmarking Financial Multimodal Reasoning with Scenario Awareness, Document Understanding, and Multi-Step Computation 
+
+## Zichen Tang 1, Haihong E 1* , Rongjin Li 1, Jiacheng Liu 1, Linwei Jia 1, Zhuodi Hao 1,Zhongjun Yang 1, Yuanze Li 1, Haolin Tian 1, Xinyi Hu 1, Peizhi Zhao 1, Yuan Liu 1,Zhengyu Wang 1, Xianghe Wang 1, Yiling Huang 1, Xueyuan Lin 2, Ruofei Bai 1,Zijian Xie 1, Qian Huang 1, Ruining Cao 1, Haocheng Gao 1
+
+> 1
+
+Beijing University of Posts and Telecommunications 
+
+> 2
+
+Hithink RoyalFlush Information Network Co., Ltd. 
+
+Abstract 
+
+We introduce FinMMDocR , a novel bilingual multimodal benchmark for evaluating multimodal large language models (MLLMs) on real-world financial numerical reasoning. Com-pared to existing benchmarks, our work delivers three ma-jor advancements. (1) Scenario Awareness : 57.9% of 1,200 expert-annotated problems incorporate 12 types of implicit financial scenarios (e.g., Portfolio Management), challenging models to perform expert-level reasoning based on assump-tions; (2) Document Understanding : 837 Chinese/English documents spanning 9 types (e.g., Company Research) aver-age 50.8 pages with rich visual elements, significantly sur-passing existing benchmarks in both breadth and depth of fi-nancial documents; (3) Multi-Step Computation : Problems demand 11-step reasoning on average (5.3 extraction + 5.7 calculation steps), with 65.0% requiring cross-page evidence (2.4 pages average). The best-performing MLLM achieves only 58.0% accuracy, and different retrieval-augmented gen-eration (RAG) methods show significant performance varia-tions on this task. We expect FinMMDocR to drive improve-ments in MLLMs and reasoning-enhanced methods on com-plex multimodal reasoning tasks in real-world scenarios. 
+
+Project Resources —https://bupt-reasoning-lab.github.io/FinMMDocR 
+
+## 1 Introduction 
+
+Recently, multimodal large language models (MLLMs) (Liu et al. 2023; Bai et al. 2025) have advanced multimodal rea-soning, excelling in visual commonsense reasoning (Zellers et al. 2019; Yu et al. 2024) and visual question answer-ing (Goyal et al. 2017; Singh et al. 2019) end-to-end. Large multimodal reasoning models (LMRMs) (OpenAI 2025), enhanced via reinforcement learning, show promise for complex real-world tasks. They demonstrate superior vi-sual understanding and expert-level reasoning capabilities in domain-specific tasks, operating human-like (Li et al. 2025). Despite LMRMs’ success, current domain-specific rea-soning benchmarks remain confined to STEM disci-
+
+> *
+
+Corresponding author. Copyright © 2026, Association for the Advancement of Artificial Intelligence (www.aaai.org). All rights reserved. Calculate the revised absolute volume of Brazilian soybean imports into China during the combined April-May 2025 period under this scenario (a nswer in million tons, rounded to two decimal places).                
+
+> Scenario Awareness Document Understanding
+> Financial Question
+> ··· ··· ···
+> Numerical Extraction
+> Imports
+> April: 10.0 Mt
+> May: 12.0 Mt
+> Baseline Shares
+> US: 21% Brazil: 71%
+> Others: 8%
+> Tariff Impact
+> US market share declines by 60%
+> Numerical Calculation
+> US_new = 21% × (1 - 60%) = 8.4%
+> ΔUS = 21% - 8.4% = 12.6%
+> Br_new = 71% + 12.6% = 83.6%
+> Others_new = 8% (unchanged)
+> Vol_Br = 22.0 × 83.6% = 18.392 Mt
+> Answer =rou nd (18.392, 2) =18.39 Mt
+> Multi-Step Computation
+> Key Reasoning Path
+> 1. US Share Drops 60% from Pre-Tariff
+> 2. Brazil Gains US Lost Share
+> 3. Others Unchanged
+> ... China's April
+> soybean arrivals
+> stands at 10 million
+> tons, rising to 12
+> million in May, ...
+> page 1 & 19: page 15:
+> 71% 21% 8%
+> Chart 36: Composition of China's Soybean Imports
+> Brazil US Others
+
+Figure 1: An example of FinMMDocR, integrating a real-world scenario with visually-rich document and multi-step numerical reasoning on China’s soybean import shifts be-tween Brazil and the United States during tariff conflicts. plines (Lu et al. 2024; Wang et al. 2024), often using ab-stract exam-style questions. They inadequately model the real-world tasks that experts routinely handle. As shown in Figure 1, financial analysts must integrate contextual knowl-edge to formulate necessary assumptions, then process vi-sually dense financial documents to extract key informa-tion. This is followed by comprehensive analytical reason-ing, often involving precise multi-step computations, to sup-port high-stakes decision-making. Table 1 shows existing fi-nancial QA and document QA benchmarks’ key limitations compared to such complex multimodal reasoning scenarios: The Fortieth AAAI Conference on Artificial Intelligence (AAAI-26) 
+
+25858 Benchmark Modalities Real-World Scenario Visually-Rich Document Multi-Step Computation                                                                                                     
+
+> Explicit (%) Implicit (%) # Docs # Pages # Tokens (k) Num. Rea. (%) # Ext. # Cal. Cross-Page (%)
+> Financial QA
+> CodeTAT-QA T✘✘✘✘✘100 2.1 1.0 ✘
+> FinanceMath T47.5 39.0 ✘✘✘100 3.3 2.5 ✘
+> FinanceReasoning T39.1 22.1 ✘✘✘100 2.9 2.2 ✘
+> MME-Finance T+I ✘✘✘✘✘15 2.2 1.1 ✘
+> FinMMR T+I ✘✘✘✘✘100 2.6 1.8 ✘
+> DocMath-Eval CompLong T+TD 15.5 15.1 1,500 61.0 46.5 100 3.0 2.0 52.7
+> Document QA
+> SlideVQA T+MD ✘✘2,619 20.0 2.0 35 ≤3≤313.9 MMLongBench-Doc T+MD ✘✘135 47.5 21.2 6≤3≤333.7 LongDocURL T+MD ✘✘396 85.6 43.6 82.6 0.8 52.9
+> FinMMDocR (ours) T+MD 33.7 57.9 837 50.8 38.8 100 5.3 5.7 65.0
+
+Table 1: Comparison of FinMMDocR and related benchmarks. T: text; I: images; TD : text document; MD : multimodal docu-ment; Explicit : scenarios with directly given conditions; Implicit : scenarios requiring inferred assumptions; Pages : pages/doc; 
+
+Tokens : tokens/doc; Num. Rea. : numerical reasoning questions; Ext. : average extraction steps; Cal. : average calculation steps. • Absence of Real-World Financial Scenario Financial analysts must analyze real-time financial environments to make professional judgments and plausible assumptions. 
+
+However, traditional benchmarks (Krumdick et al. 2024; Gan et al. 2025; Tanaka et al. 2023; Ma et al. 2024; Deng et al. 2025) only extract explicitly stated information. • Deficiency in Multimodal Document Understanding 
+
+Financial analysts rely on extensive professional doc-uments to extract key information and diverse indica-tors. Some benchmarks (Krumdick et al. 2024; Zhao et al. 2024a; Tang et al. 2025b) use text-only inputs, while multimodal ones (Luo et al. 2025; Gan et al. 2025) contain sparse isolated charts or tables. Long-document benchmarks (Ma et al. 2024; Deng et al. 2025) lack di-verse financial documents and numerical reasoning tasks. • Neglect of Precise Multi-Step Computation Financial decision-making, unlike qualitative analysis, requires exact multi-step computations. In this high-stakes do-main (Krumdick et al. 2024), models must deliver nu-merically exact answers under strict criteria. Prior bench-marks (Zhao et al. 2024a; Krumdick et al. 2024) ignore units, percentages, and decimals or allow 1.0% error mar-gins, diverging from real-world needs. To fill this gap, we construct FinMMDocR, a more chal-lenging and realistic financial multimodal reasoning bench-mark featuring contextual awareness, document understand-ing, and multi-step computation. FinMMDocR consists of 1,200 numerical reasoning questions (1:1 Chinese-English), equipped with real-world scenarios, visually-rich finan-cial documents, detailed evidence page annotations, golden Python solutions for problem-solving, and exact answers. • Scenario Awareness 57.9% of questions incorporate carefully designed implicit financial scenarios from 12 categories (e.g., Portfolio Management), with an average of 1.9 scenarios per question, significantly surpassing ex-isting benchmarks in density, richness, and complexity. • Document Understanding FinMMDocR contains 837 financial long-documents covering 9 bilingual (Chine-se/English) categories (e.g., Financial Engineering, Fu-tures & Options). These documents feature high informa-tion density (50.8 pages/doc and 38.8k tokens/doc) and professional visual elements (e.g., candlestick charts). • Multi-Step Computation FinMMDocR averages 11 reasoning steps (5.3 extraction, 5.7 calculation), surpass-ing other financial reasoning tasks. It enforces strict eval-uation (units, percentages, decimals) with 0.2% error tol-erance, matching real-world needs. 65.0% of questions require cross-page reasoning (2.4 evidence pages each). We evaluate 11 proprietary and open-source MLLMs with image inputs using Program-of-Thought (PoT) (Chen et al. 2023), along with 15 LLMs with text inputs using OCR. Be-yond end-to-end reasoning, we also evaluate 6 embedding models and 5 agentic retrieval-augmented generation (Agen-tic RAG) frameworks (Singh et al. 2025). The experimental results reveal three key findings: • MLLMs Are Not Qualified Financial Experts for Multimodal Numerical Reasoning. No model ex-ceeds 60.0% accuracy (OpenAI o4-mini-high: 58.0%), with open-source models particularly struggling, while reasoning-enhanced models show consistent advantages. • The More Complex the Task, the Worse Models Per-form. Multimodal models show accuracy degradation in multi-scenario tasks and document understanding fail-ures (78.0% of errors), with extraction errors being the main bottleneck in PoT settings. • Vision Is Stronger Than Text, But Complex Agents Underperform Simple RAG. Vision RAGs surpass text-only methods by utilizing critical document visual cues, yet longer pipelines introduce error propagation that de-grades performance, while iterative Agentic RAGs suffer from prohibitive latency without corresponding accuracy improvements for practical deployment. 25859 Financial Statement Analysis 
+
+Question: Calculate the 2025 average collection period (DSO) based on year-end accounts receivable for 2024 & 2025 and 2025 total revenue. 
+
+Kws: Accounts Receivable Analysis 
+
+Solution: ar_24=565 ... # omitted avg_ar_25=(ar_24+ ar_25)/2 ar_turnover=revenue_25/avg_ar_25 dso_25=365/ar_turnover answer=round(dso_25, 1) 
+
+Extract: 3 Calculate: 4 GT: 438.2 
+
+Question: Adjust convertible bond allocations to Q4 2024 market. C a l c u l a t e a b s o l u t e % c h a n g e i n balanced bonds' share of total assets. 
+
+Kws: Convertible Bond Allocation 
+
+Solution: cb_alloc=0.247 ... # omitted init_total=cb_alloc*init_bal new_total=cb_alloc*mkt_bal chg_pct=(new_total-init_total)*100 answer=round(chg_pct,3) 
+
+Extract: 3 Calculate: 4 GT: 0.445 
+
+Investment Analysis & Risk Management Portfolio Management Asset & Equity Valuation Corporate Finance & Capital Management Financial Modeling & Projections Corporate Strategy & Operations Cost Accounting & Management Taxation & Accounting Commodities, Energy & Real Assets Market & Industry Analysis Macroeconomics & Fixed Income 
+
+Question: Adjust Industrials sector P/E by EPS beat ratio vs. S&P 500. Calculate new implied total market cap (in billion, 2 decimals). 
+
+Kws: Sector Valuation Adjustment 
+
+Solution: ind_eps=0.88 sp_eps=0.82 ind_mkt=4751.15 adj=ind_eps/sp_eps new_mkt=ind_mkt*adj answer=round(new_mkt,2) 
+
+Extract: 3 Calculate: 3 GT: 5098.8 Kws: Gross Profit Deviation Analysis 
+
+Solution: rev=5220.4 ... # omitted gp2023=rev*m2023 gp2019=rev*m2019 dev=gp2019-gp2023 answer=round(dev,2) 
+
+Extract: 3 Calculate: 4 GT: 1456.49 
+
+Question: Compare 2023 actual RX gross profit vs. 2019 margin applied to 2023 revenue. Calculate total adverse deviation (2 decimals). 
+
+Kws: Semiconductor Growth Premium Modeling 
+
+Solution: growth=7.64 ... # omitted inf_fac=inf/inf_base idx=(g_term*job_fac)/inf_fac answer=round(idx,4) 
+
+Extract: 5 Calculate: 4 GT: 0.0611 Kws: External Inflow and FX Deposit Analysis 
+
+Solution: inflow=324.39 ... # omitted dep_total=dep_ent+dep_res ratio=inflow/dep_total answer=round(ratio,3) 
+
+Extract: 3 Calculate: 3 GT: 0.705 Kws: Gold Return Sensitivity Modeling 
+
+Solution: gold_ret=0.211 infl=0.02 tips_ret=0.0125 k=(gold_ret-infl)/tips_ret answer=round(k,2) 
+
+Extract: 2 Calculate: 2 GT: 15.28 Kws: Agricultural Futures Target Return Analysis 
+
+Solution: p0=2310 ... # omitted p_mid=(p_min+p_max)/2 inc=p_mid-p0 pct=(inc/p0)*100 answer=round(pct,2) 
+
+Extract: 3 Calculate: 4 GT: 7.14 Kws: Tax Rate Impact on Net Income 
+
+Solution: pre11=27772 ... # omitted tax10=1054 rate10=tax10/pre10 tax11_new=pre11*rate10 diff=tax11-tax11_new answer=round(diff) 
+
+Extract: 4 Calculate: 4 GT: 2395 Kws: Lithium Supply Cost Reduction Analysis 
+
+Solution: cogs_hm=65.24 ... # omitted cogs_0=cogs_b/cost_mix save=cogs_0-cogs_b answer=round(save,3) 
+
+Extract: 2 Calculate: 6 GT: 0.958 Kws: Inventory Efficiency Cash Flow Impact 
+
+Solution: rev=874 ... # omitted days_new=days_old-days_red inv_new=(days_new/365)*cogs cf=inv-inv_new answer=round(cf,2) 
+
+Extract: 3 Calculate: 6 GT: 32.18 Kws: AI+AR Glasses SOC Market Sizing 
+
+Solution: sales=360 ... # omitted soc_mkt=sales*1_000_000*soc_2032 soc_mkt_b=soc_mkt/1_000_000_000 answer=round(soc_mkt_b,2) 
+
+Extract: 3 Calculate: 6 GT: 22.77 
+
+Question: Calculate hypothetical semiconductor growth index using g r o w t h , j o b o p e n i n g s r a t i o , a n d inflation expectations (4 decimals). 
+
+Question: Calculate ratio of net Goods Trade & Direct Investment inflow to FX deposit increase (Non-Financial & Residents) (3 decimals). 
+
+Question: Given expected gold return and 1-year TIPS real return ( 1 . 2 5 % ) , c a l c u l a t e s e n s i t i v i t y coefficient k. Round to 2 decimals. 
+
+Question: Calculate % increase in C2507 futures price from April 14 l e v e l t o r e a c h t a r g e t m i d p o i n t , assuming basis unchanged (2 decimals). 
+
+Question: Calculate 2032 global SOC market value for AI+AR glasses based on forecast sales and BOM assumptions. Round to 4 decimals. 
+
+Question: Calculate 2025 cash flow benefit from 15-day shorter i n v e n t o r y p e r i o d v s . o r i g i n a l projection (100 million, 2 decimals). 
+
+Question: Calculate 2026 lithium C O G S r e d u c t i o n f r o m a c h i e v i n g projected self-sufficiency rate vs. 100% external sourcing (in billion, 3 decimals). 
+
+Question: Recalculate 2011 net income using 2010 federal tax rate. Tax rate = 2010 tax / 2010 pre-tax income (in thousand, rounded). Figure 2: 12 financial scenarios with FinMMDocR examples, covering 9 document categories and cross-page computations. Requires expert scenario awareness , document understanding , and multi-step computation . Kws : keywords, GT : ground truth. 
+
+## 2 Benchmark Construction 
+
+2.1 Overview of FinMMDocR 
+
+We introduce FinMMDocR, designed to evaluate the ca-pability of MLLMs to perform complex numerical reason-ing when presented with real-world financial scenarios and visually-rich financial documents. Following (Zhao et al. 2024b), each question is accompanied by a Python solution, a standard answer, and page numbers that indicate the loca-tions of relevant visual elements. More examples are shown in Appendix A. 
+
+2.2 Data Curation Process 
+
+Updates to Public Dataset We selected and re-annotated 600 English questions from the DocMath-Eval CompLong 
+
+(Zhao et al. 2024b), comprising all 300 samples from the 
+
+testmini subset and an additional 300 samples chosen from the test subset based on diversity and complexity. For the latter, we manually completed previously unreleased solu-tion programs, standard answers, and evidence pages. We re-trieved the corresponding documents for all selected exam-ples, rendered each page as an image, and removed original textual inputs to ensure a real multimodal reasoning setting. 
+
+Building a Novel Dataset from Scratch We additionally created 600 entirely new Chinese questions. Specifically, we collected 385 Chinese research reports, acquired through authorized channels, covering diverse financial topics (e.g., Company Research, Industry Research). We manually con-structed realistic financial scenarios based on document con-tents (e.g., Financial Modeling & Projections), and further generated knowledge-intensive problems involving complex 25860 18.9% 14.5% 13.7% 13.6% 7.9% 6.9% 6.4% 5.4% 4.9% 4.4% 1.9% 1.4% FSA CF&CM PM A&EV M&IA M&FI IA&RM CE&RA FM&P CS&O CA&M T&A              
+
+> (a) Distribution of financial scenarios.
+> 050 100 150 200 250 300 350 1-20 21-40 41-60 61-80 81-100 101-120 121-140 141-160 161+ 12.5% 40.5% 19.6% 11.6% 6.2% 3.5% 2.6%
+> (b) Distribution of document lengths.
+> 050 100 150 200 250 14710 13 16 19 22 25 28 Step Number of Numerical Extraction Step Number of Numerical Calculation Step Number of Multi-Step Computation
+> (c) Distribution of the number of steps in
+> numerical extraction ,numerical calculation ,and multi-step computation .
+> Note: FSA: Financial Statement Analysis; PM: Portfolio Management; A&EV: Asset & Equity Valuation; CF&CM: Corporate Finance & Capital Management; M&IA: Market & Industry Analysis; M&FI: Macroeconomics & Fixed Income; IA&RM: Investment Analysis & Risk Management; CE&RA: Commodities, Energy & Real Assets; FM&P: Financial Modeling & Projections; CS&O: Corporate Strategy & Operations; CA&M: Cost Accounting & Management; T&A: Taxation & Accounting
+> 1.8% 1.7%
+
+Figure 3: Distribution of FinMMDocR: financial scenarios, document lengths, and reasoning steps per question. 22.7% 42.4% 11.2% 7.6% Financial Report (10-Q) Company Research Financial Engineering Financial Report (10-K) Futures & Options Industry Research Strategy Research Macro Research Market Interpretation 6.0% 3.9% 2.2% 2.1% 2.0% 
+
+Figure 4: Distribution of FinMMDocR: financial document categories. numerical reasoning along with corresponding Python solu-tions, with the assistance of two advanced MLLMs (Deep-Mind 2025; Anthropic 2025). Documents included in Fin-MMDocR are exceptionally long, and problems require ex-tracting information dispersed across various sections and modalities (e.g., text, tables, and charts). 
+
+Data Quality Assurance Our annotation team comprised 15 master’s students majoring in finance and two CFA-certified experts. We implemented a rigorous annotation pro-cess to ensure benchmark quality. Specifically, we first fed each sample along with its multimodal document into Gem-ini 2.5 Pro Preview (DeepMind 2025) and Claude 3.7 Son-net (Anthropic 2025), the highest-performing MLLMs, to obtain two candidate annotations. Since the model’s initial outputs contained numerous logical errors, calculation mis-takes, and hallucinations, two annotators cross-reviewed the candidate annotations, selected one for adoption, and sub-sequently refined it. In cases of disagreement, an additional expert was brought in for arbitration. The selected results underwent further verification and annotation by two anno-tators. From the initially generated 759 samples, 159 were discarded. Of the remaining 600 samples, 494 underwent modifications: 451 required evidence revision, 80 needed so-lution adjustment, and 36 had question reformulation. De-tails are provided in Appendix C. 
+
+Property Value 
+
+# Total Samples 1,200 # Total Document 837 # Financial Scenario (Avg.) 1.9 # Evidence Page (Avg.) 2.4 # Textual Extraction Step (Avg.) 1.0 # Visual Extraction Step (Avg.) 4.3 # Extraction Step (Textual and Visual) (Avg.) 5.3 # Calculation Step (Avg.) 5.7 # Computation Step (Ext. and Cal.) (Avg.) 11.0 
+
+Table 2: Basic statistics of FinMMDocR. 
+
+## 3 Benchmark Analysis 
+
+Table 2 shows FinMMDocR contains 1,200 samples evalu-ating MLLMs’ capabilities across three key dimensions. 
+
+Scenario Awareness FinMMDocR introduces financial rea-soning problems with unprecedented scenario density and depth. 66.2% of problems are scenario-driven across 12 cat-egories (Figure 3(a)). Additionally, all problems feature 1.9 mixed scenarios on average, with 57.9% requiring implicit scenario assumptions rather than given conditions. 
+
+Document Understanding Tasks in FinMMDocR require synthesizing information from multimodal domain-specific documents. As shown in Figure 3(b) and Figure 4, 837 bilin-gual (Chinese/English) documents cover 9 categories, aver-aging 50.8 pages each with 2.4 evidence pages per task, and contain professional charts demanding domain expertise. 
+
+Multi-Step Computation FinMMDocR provides complex financial reasoning tasks requiring cross-page, multimodal, and multi-step reasoning. As shown in Figure 3(c), each problem requires 11 sequential reasoning steps on average: 5.3 for multimodal numerical extraction (1.0 textual, 4.3 vi-sual) and 5.7 for financial calculation synthesis. Compared to prior financial QA and document QA bench-marks, FinMMDocR eliminates explicit conditions, limited modalities/types, and excessive focus on information extrac-tion/logical reasoning, better evaluating MLLMs’ complex numerical reasoning capabilities in real-world settings. 25861 Model Size ACC Input Cfg. Scenario Doc. Len. Extract Compute                                                                                                                                                                                                                                                                                        
+
+> w/ w/o ≤30 ≥31 ≤4≥5≤4≥5
+> MLLM (Image Input)
+> Proprietary MLLMs
+> OpenAI o4-mini-high 58.00 300@F 55.72 62.34 57.02 58.95 63.92 51.50 63.36 52.05
+> Doubao-1.5-thinking-pro 38.17 U@F 39.50 35.41 43.99 32.51 40.35 35.93 39.15 37.25 Claude 3.7 Sonnet (Thinking) 37.00 50@1920 35.60 39.40 41.96 32.18 40.66 32.92 39.31 34.40 Doubao-1.5-vision-pro 29.25 U@F 28.81 30.17 32.99 25.62 32.91 25.13 31.92 26.20 Gemini 2.5 Pro Preview 27.42 300@F 27.92 26.43 26.40 28.41 32.91 21.24 31.45 22.82 GPT-4o 17.17 50@1920 12.20 27.18 13.54 20.69 26.42 6.90 25.79 7.49 Grok 2 Vision 2.17 15@1920 2.64 1.25 1.18 3.12 3.16 1.06 3.14 1.07
+> Open-source MLLMs
+> Qwen2.5-VL 72B 72B 12.92 50@F 10.57 17.71 14.04 11.82 18.35 6.90 18.24 6.95 Llama 4 Maverick 400A17B 2.67 300@F 3.65 0.75 1.86 3.45 3.96 1.24 4.09 1.07 Mistral Small 3.1 24B 1.08 15@3840 1.51 0.25 0.51 1.64 1.58 0.53 1.42 0.71 Gemma 3 27B 27B 0.67 15@3840 1.01 0.00 0.17 1.15 0.95 0.35 0.94 0.36
+> OCR + LLM (Text Input)
+> Proprietary LLMs
+> Gemini 2.5 Pro Preview 53.83 N55.22 51.12 56.01 51.72 56.80 50.62 54.09 53.65
+> Claude 3.7 Sonnet (Thinking) 48.58 N48.68 48.38 50.42 46.80 51.90 44.96 49.69 47.42 OpenAI o4-mini-high 47.92 200k 50.94 41.90 51.27 44.66 49.53 46.19 47.64 48.31 Doubao-1.5-thinking-pro 42.67 96k 43.52 40.90 44.33 41.05 46.99 37.88 44.65 40.46 Grok 3 41.00 128k 40.13 42.64 41.29 40.72 44.62 36.99 43.87 37.79 Doubao-1.5-vision-pro 32.75 128k 31.70 34.66 30.46 34.98 39.40 25.49 38.36 26.56 GPT-4o 22.17 128k 19.25 28.18 20.14 24.14 28.96 14.69 28.93 14.62
+> Open-source LLMs
+> DeepSeek-R1 671A37B 40.00 64k 41.51 37.16 42.13 37.93 44.46 35.22 42.61 37.25 DeepSeek-V3 671A37B 32.67 128k 30.57 36.66 30.46 34.81 40.03 24.42 39.47 24.96 Llama 4 Maverick 400A17B 29.08 N27.30 32.42 29.61 28.57 33.23 24.42 32.55 25.13 Qwen3 235A22B 25.08 128k 21.26 32.67 22.00 28.08 34.18 15.04 33.33 15.86 Mistral Small 3.1 24B 15.83 128k 12.45 22.44 14.72 16.91 21.68 9.38 22.33 8.56 Qwen2.5-VL 72B 72B 15.00 128k 12.96 18.95 16.75 13.30 19.62 9.91 19.81 9.63 Llama 3.3 70B 70B 12.17 128k 9.43 17.71 9.14 15.11 18.51 5.13 19.18 4.28 Gemma 3 27B 27B 5.75 128k 5.41 6.48 4.91 6.57 8.39 2.83 8.65 2.50
+
+Table 3: Model performance across input configurations. Size : for MoE models, total params and total activated are divided by “A”; ACC : accuracy; Input Cfg. : U@F = unmerged at full resolution, X@Y = merge X images (e.g., 300), Y = long edge pixels (e.g., 1920), N = No cut-off; Scenario : w/ = with contextual scenarios, w/o = without; Doc. Len. : document length. 
+
+## 4 Experiments 
+
+4.1 Experiments Setting 
+
+Models Following (Ma et al. 2024; Deng et al. 2025), we assessed the comprehension capabilities of MLLMs by feed-ing images directly into models and inputting text extracted by Tesseract OCR engine (Smith 2007). We evaluated 26 different configurations (11 for image input, 15 for text in-put) on both proprietary and open-source models. 
+
+Input Paradigm We designed various configurations to accommodate differences across MLLMs. We tested merg-ing 300, 50, or 15 pages into a single input, alongside an unmerged strategy, while each setting was further tested un-der three resolution levels (i.e., full resolution, long side 3840/1920 pixels). A fallback strategy that prioritizes pre-serving page count was applied when models fail to respond in most cases. For text input, we set multiple cut-off lengths to ensure compatibility. Details are provided in Appendix D. 
+
+Evaluation Methods We adopt PoT prompts (Chen et al. 2023), which mitigate numerical errors (Zhao et al. 2024a,b), and assess accuracy under a tolerance of 0.2%. 
+
+4.2 Main Results 
+
+Table 3 presents the results across all models. Our main find-ings are summarized as follows: 
+
+Overall performance across models remains unsatisfac-tory. None of the models achieved accuracy above the 60% threshold in any of the settings. Within MLLMs, even the SoTA model OpenAI o4-mini-high reached only 58% accu-racy. Many models struggled with handling large-scale in-puts, both visual and textual. Moreover, open-source models consistently underperformed proprietary models. 
+
+Reasoning-enhanced models consistently outperform those without. Across both input settings, reasoning-enhanced models achieved substantially higher accuracy. Among proprietary models, the top three performers were all reasoning-enhanced. Notably, DeepSeek-R1 (Guo et al. 25862 10 20 30 40 50 60 70 80 ≤4 5-6 7-8 9-10 11-12 13-14 15-16 17-18 19-20 ≥21            
+
+> 010 20 30 40 50 60 70 80 ≤2 3-4 5-6 7-8 9-10 ≥11  10 20 30 40 50 60 70 ≤2 3-4 5-6 7-8 9-10 ≥11
+> Extraction Step Calculation Step Computation Step Claude 3.7 Sonnet (Thinking) OpenAI o4-mini-high Gemini 2.5 Pro Preview Doubao-1.5-thinking-pro
+> 10 20 30 40 50 60 70 80 ≤20 21-30 31-40 41-50 51-60 ≥61  10 20 30 40 50 60 70 ≤10 11-20 21-30 ≥31
+> Scenario Count (Text Input)
+> 20 30 40 50 60 1234≥5
+> 10 20 30 40 50 60 70 1234≥5
+> Scenario Count (Image Input) Avg. Evidence Position Document Length Accuracy (%)  Accuracy (%)
+
+Figure 5: Fine-grained results based on (top left) scenario count, (bottom left) document length, (bottom middle) average evidence position, and (right) the number of steps in numerical extraction, numerical calculation, and overall computation. 2025), the only open-source large reasoning model (LRM) in the evaluation, achieved the highest accuracy (40.0%) within its group. 
+
+MLLMs face significant bottlenecks in processing long multimodal inputs. While MMLongBenchDoc (Ma et al. 2024) acknowledges the potential information loss intro-duced by OCR, most MLLMs still perform worse than OCR+LLM models on FinMMDocR, highlighting the bot-tlenecks MLLMs face when handling image input directly. Specifically, OpenAI o4-mini-high is the only model whose image input performance exceeded its text counterpart, indi-cating its superior multimodal reasoning capabilities. 
+
+Models exhibit substantial disparities in visual under-standing. In the OCR+LLM group, the accuracy gap among the top four proprietary models was under 12 points. However, this gap was notably larger in MLLMs (nearly 30 points between OpenAI o4-mini-high and Doubao-1.5-vision-pro). This indicates that visual understanding varies much more significantly across MLLMs, compared to rela-tively stable language understanding. 
+
+4.3 Fine-Grained Analysis 
+
+Table 3 and Figure 5 also present the fine-grained results on the further analysis. Detailed results are provided in Ap-pendix E. The key findings are as follows: 
+
+Current models struggle with multi-scenario tasks. All ex-hibit a notable decline in accuracy as the number of scenar-ios increases. This likely stems from the increased complex-ity of scenario combinations, requiring more assumptions and associations, thereby better evaluating models’ stable reasoning capabilities in complex environments. 
+
+Strong document understanding plays a critical role. Ope-nAI o4-mini-high and Gemini 2.5 Pro Preview maintain sta-ble performance across varying document lengths, likely due to their robust contextual comprehension, while the other two models drop substantially. A similar trend is observed in Figure 5 (bottom middle), where the average index posi-tion of evidence positively correlates with document length. 
+
+Information extraction, rather than numerical calcula-tion, has a greater impact on model performance in the PoT setting. Accuracy declines progressively with increas-ing computation steps, following similar patterns to both ex-traction and calculation performance. Given that calculation typically depends on prior extraction, we hypothesize that this step-dependent accuracy reduction is primarily driven by extraction errors, which aligns with both the PoT’s ad-vantage and subsequent error analysis. 
+
+4.4 Error Analysis 
+
+We randomly sampled 100 failure cases from OpenAI o4-mini-high. Each instance may exhibit multiple error types, which we categorize into four categories. Detailed examples and analysis are provided in Appendix F. • Scenario Awareness Error (33/100): Misinterpretation of task intent, contextual constraints, or key parameters, resulting in flawed reasoning paths. • Document Understanding Error (78/100) : Failure to accurately locate or extract critical information from complex multimodal documents. • Knowledge Reasoning Error (44/100) : Incorrect for-mula selection or invalid reasoning structures. • Numerical Calculation Error (5/100) : Mistakes in cal-culation despite correct formulas, often due to precision loss, rounding, or intermediate step errors. 25863 595.0 78.9 74.0 53.0 44.0 1 100 10000 SimpleDoc MDocAgent ViDoRAG M3DocRAG VRAG-RL Average Time (s)               
+
+> Text Embedding Visual Embedding Summary Generation Inference
+> ColQwen2.5
+> 010 20 30 40 50 00.5 11.5 22.5 33.5 44.5 5Accuracy (%) Average Token (k)
+> w/o RAG Oracle ColQwen2.5 M3DocRAG SimpleDoc MDocAgent VRAG-RL ViDoRAG
+> w/o RAG (Think)
+
+Figure 6: (Top) Accuracy and token consumption compari-son of RAG methods. (Bottom) Runtime composition com-parison of Agentic RAGs vs. ColQwen2.5. 
+
+4.5 RAG Analysis 
+
+We evaluated 6 embedding models (Izacard et al. 2022; Chen et al. 2024; Yu et al. 2025; Faysse et al. 2025) and 5 Agentic RAGs (Cho et al. 2025; Wang et al. 2025a; Han et al. 2025; Jain et al. 2025; Wang et al. 2025b). All Agen-tic RAGs employed ColQwen2.5 for retrieval and Doubao-1.5-vision-pro for generation. Methods with visual embed-dings consistently outperformed text-only approaches, and ColQwen2.5 achieving the best performance. Agentic RAGs underperformed ColQwen2.5, despite consuming more to-kens and time, as shown in Figure 6. Detailed analysis is provided in Appendix H. The key findings are as follows: 
+
+Agents based solely on semantic retrieval fall short in han-dling FinMMDocR’s complex reasoning demands. Simple-Doc and MDocAgent attempt to enhance semantic represen-tation through multimodal embeddings. However, they often miss the pages containing intermediate variables that are not explicitly stated in the question, resulting in incomplete in-formation retrieval. ViDoRAG partially addresses this issue through an iterative workflow, simulating limited reasoning. Despite lower overall accuracy, it achieves more complete retrieval and reasoning coverage on most of the questions where both models and ColQwen2.5 failed. 
+
+Agentic RAGs rely on predefined workflows and fall short of reasoning-enhanced models. ViDoRAG exhibits more numerical errors, like invalid significant figures, likely due to test-based output randomness and context-induced for-getting. Additionally, current frameworks heavily depend on upstream outputs that are rarely questioned or revised down-stream, preventing error recovery. 
+
+The effectiveness of visually focused strategies remains to be explored. VRAG-RL performed poorly on FinMMDocR, though understandable given the task difficulty. We attribute this to its small base model (7B), and the benefit of scaling up with reinforcement learning remains to be verified. 
+
+## 5 Related Work 
+
+Inspired by real-world financial analysis tasks, financial multimodal reasoning demands models to comprehend fi-nancial contexts, extract key data from visually dense mul-timodal financial documents, and perform precise numerical calculations to support multi-step reasoning. However, ex-isting financial QA benchmarks and long-document VQA benchmarks fail to authentically model this task, exhibit-ing significant gaps. Benchmarks like FinQA (Chen et al. 2021), TAT-QA (Zhu et al. 2021), and ConvFinQA (Chen et al. 2022) only require simple information extraction and arithmetic operations under explicit conditions, while Fi-nanceReasoning (Tang et al. 2025b), FinanceMath (Zhao et al. 2024a), DocMath-Eval (Zhao et al. 2024b), and Fin-Code (Krumdick et al. 2024) incorporate limited contexts with text-only inputs. FinMMR (Tang et al. 2025a), Fin-MME (Luo et al. 2025), and MME-Finance (Gan et al. 2025) evaluate models’ reasoning capabilities on single or few im-ages. LongDocURL (Deng et al. 2025) and MMLongBench-Doc (Ma et al. 2024) focus on generic multimodal long-document QA, where merely 6% and 8% of tasks involve financial numerical reasoning, further constrained by the scarcity and diversity of domain-specific documents. MLLMs (ByteDance 2025b; OpenAI 2024; xAI 2024; Bai et al. 2025; AI@Meta 2025; AI 2025; Team et al. 2025) and LMRMs (OpenAI 2025; ByteDance 2025a; An-thropic 2025; DeepMind 2025) offer promising solutions for end-to-end financial multimodal reasoning, leveraging ex-panded context windows and enhanced reasoning capacities. Concurrently, RAG methods have alleviated models’ long-document processing burdens, retrieving relevant pages via semantic similarity between queries and pages. Following text-based RAGs (e.g., BM25, Contriever (Izacard et al. 2022), BGE-M3 (Chen et al. 2024)), vision RAGs like Vis-RAG (Yu et al. 2025), ColPali (Faysse et al. 2025), and ColQwen2.5 (Faysse et al. 2025) have improved multimodal retrieval performance. Agentic RAG frameworks such as M3DocRAG (Cho et al. 2025), ViDoRAG (Wang et al. 2025a), MDocAgent (Han et al. 2025), SimpleDoc (Jain et al. 2025), and VRAG-RL (Wang et al. 2025b) employ multi-agent collaboration for flexible reasoning. 
+
+## 6 Conclusion 
+
+We introduce FinMMDocR, a financial multimodal reason-ing benchmark for evaluating MLLMs’ professional docu-ment understanding and precise multi-step computation in real-world financial scenarios, alongside comprehensive as-sessments of diverse RAG methods in this complex setting. Extensive experiments reveal significant performance gaps between MLLMs and human experts, with no model exceed-ing 60% accuracy. While RAG shows promise for informa-tion retrieval and reducing visual burdens, fundamental im-provements in models’ reasoning capabilities and RAG effi-ciency remain critical future directions. We hope this work establishes foundations for advancing domain-specific mul-timodal reasoning. 25864 Acknowledgments 
+
+This work is supported by the National Natural Science Foundation of China (Grant Nos. 62473271, 62176026), the Beijing Natural Science Foundation (Grant Nos. QY25345, QY25338), the Fundamental Research Funds for the Bei-jing University of Posts and Telecommunications (Grant No. 2025AI4S03), the BUPT Innovation and Entrepreneurship Support Program (Grant Nos. 2025-YC-A033, 2025-YC-A042), and data support from Hithink RoyalFlush Infor-mation Network Co., Ltd. This work is also supported by the Engineering Research Center of Information Networks, Ministry of Education, China. We would also like to thank the anonymous reviewers and area chairs for constructive discussions and feedback. 
+
+## References 
+
+AI, M. 2025. Mistral Small 3.1. https://mistral.ai/news/mistral-small-3-1. Accessed: 2025-03-17. AI@Meta. 2025. The Llama 4 herd: The beginning of a new era of natively multimodal AI innovation. https://ai.meta.com/blog/ llama-4-multimodal-intelligence/. Accessed: 2025-04-05. Anthropic. 2025. Claude 3.7 Sonnet and Claude Code. https:// www.anthropic.com/news/claude-3-7-sonnet. Accessed: 2025-02-25. Bai, S.; Chen, K.; Liu, X.; Wang, J.; Ge, W.; Song, S.; Dang, K.; Wang, P.; Wang, S.; Tang, J.; Zhong, H.; Zhu, Y.; Yang, M.; Li, Z.; Wan, J.; Wang, P.; Ding, W.; Fu, Z.; Xu, Y.; Ye, J.; Zhang, X.; Xie, T.; Cheng, Z.; Zhang, H.; Yang, Z.; Xu, H.; and Lin, J. 2025. Qwen2.5-VL Technical Report. arXiv:2502.13923. ByteDance. 2025a. Doubao-1.5-thinking-pro Model Card. https://console.volcengine.com/ark/region:ark+cn-beijing/model/detail?Id=doubao-1-5-thinking-pro. Accessed: 2025-04-15. ByteDance. 2025b. Doubao-1.5-vision-pro Model Card. https://console.volcengine.com/ark/region:ark+cn-beijing/model/ detail?Id=doubao-1-5-vision-pro. Accessed: 2025-03-28. Chen, J.; Xiao, S.; Zhang, P.; Luo, K.; Lian, D.; and Liu, Z. 2024. M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Dis-tillation. In Ku, L.-W.; Martins, A.; and Srikumar, V., eds., Find-ings of the Association for Computational Linguistics: ACL 2024 ,2318–2335. Bangkok, Thailand: Association for Computational Linguistics. Chen, W.; Ma, X.; Wang, X.; and Cohen, W. W. 2023. Program of Thoughts Prompting: Disentangling Computation from Reasoning for Numerical Reasoning Tasks. Transactions on Machine Learn-ing Research .Chen, Z.; Chen, W.; Smiley, C.; Shah, S.; Borova, I.; Langdon, D.; Moussa, R.; Beane, M.; Huang, T.-H.; Routledge, B.; and Wang, W. Y. 2021. FinQA: A Dataset of Numerical Reasoning over Fi-nancial Data. In Moens, M.-F.; Huang, X.; Specia, L.; and Yih, S. W.-t., eds., Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , 3697–3711. Online and Punta Cana, Dominican Republic: Association for Computational Linguistics. Chen, Z.; Li, S.; Smiley, C.; Ma, Z.; Shah, S.; and Wang, W. Y. 2022. ConvFinQA: Exploring the Chain of Numerical Reasoning in Conversational Finance Question Answering. In Goldberg, Y.; Kozareva, Z.; and Zhang, Y., eds., Proceedings of the 2022 Con-ference on Empirical Methods in Natural Language Processing ,6279–6292. Abu Dhabi, United Arab Emirates: Association for Computational Linguistics. Cho, J.; Mahata, D.; Irsoy, O.; He, Y.; and Bansal, M. 2025. M3DocVQA: Multi-modal Multi-page Multi-document Under-standing. In Proceedings of the IEEE/CVF International Confer-ence on Computer Vision (ICCV) Workshops , 6178–6188. DeepMind, G. 2025. Build rich, interactive web apps with an updated Gemini 2.5 Pro. https://blog.google/products/gemini/ gemini-2-5-pro-updates/. Accessed: 2025-05-06. Deng, C.; Yuan, J.; Bu, P.; Wang, P.; Li, Z.-Z.; Xu, J.; Li, X.-H.; Gao, Y.; Song, J.; Zheng, B.; and Liu, C.-L. 2025. LongDocURL: a Comprehensive Multimodal Long Document Benchmark Integrat-ing Understanding, Reasoning, and Locating. In Che, W.; Nabende, J.; Shutova, E.; and Pilehvar, M. T., eds., Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 1135–1159. Vienna, Austria: Associa-tion for Computational Linguistics. ISBN 979-8-89176-251-0. Faysse, M.; Sibille, H.; Wu, T.; Omrani, B.; Viaud, G.; HUDELOT, C.; and Colombo, P. 2025. ColPali: Efficient Document Retrieval with Vision Language Models. In The Thirteenth International Conference on Learning Representations .Gan, Z.; Zhang, D.; Li, H.; Wu, Y.; Lin, X.; Liu, J.; Wu, H.; Fu, C.; Xu, Z.; Zhang, R.; and Dai, Y. 2025. MME-Finance: A Mul-timodal Finance Benchmark for Expert-level Understanding and Reasoning. In Proceedings of the 33rd ACM International Confer-ence on Multimedia , MM ’25, 12867–12874. New York, NY, USA: Association for Computing Machinery. ISBN 9798400720352. Goyal, Y.; Khot, T.; Summers-Stay, D.; Batra, D.; and Parikh, D. 2017. Making the v in VQA Matter: Elevating the Role of Image Understanding in Visual Question Answering. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) .Guo, D.; Yang, D.; Zhang, H.; Song, J.; Wang, P.; Zhu, Q.; Xu, R.; Zhang, R.; Ma, S.; Bi, X.; et al. 2025. Deepseek-r1 incentivizes rea-soning in llms through reinforcement learning. Nature , 645(8081): 633–638. Han, S.; Xia, P.; Zhang, R.; Sun, T.; Li, Y.; Zhu, H.; and Yao, H. 2025. MDocAgent: A Multi-Modal Multi-Agent Framework for Document Understanding. arXiv:2503.13964. Izacard, G.; Caron, M.; Hosseini, L.; Riedel, S.; Bojanowski, P.; Joulin, A.; and Grave, E. 2022. Unsupervised Dense Informa-tion Retrieval with Contrastive Learning. Transactions on Machine Learning Research .Jain, C.; Wu, Y.; Zeng, Y.; Liu, J.; Dai, S.; Shao, Z.; Wu, Q.; and Wang, H. 2025. SimpleDoc: Multi-Modal Document Understand-ing with Dual-Cue Page Retrieval and Iterative Refinement. In Christodoulopoulos, C.; Chakraborty, T.; Rose, C.; and Peng, V., eds., Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , 28398–28415. Suzhou, China: As-sociation for Computational Linguistics. ISBN 979-8-89176-332-6. Krumdick, M.; Koncel-Kedziorski, R.; Lai, V. D.; Reddy, V.; Lovering, C.; and Tanner, C. 2024. BizBench: A Quantitative Rea-soning Benchmark for Business and Finance. In Ku, L.-W.; Mar-tins, A.; and Srikumar, V., eds., Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 8309–8332. Bangkok, Thailand: Association for Computational Linguistics. Li, Y.; Liu, Z.; Li, Z.; Zhang, X.; Xu, Z.; Chen, X.; Shi, H.; Jiang, S.; Wang, X.; Wang, J.; Huang, S.; Zhao, X.; Jiang, B.; Hong, L.; Wang, L.; Tian, Z.; Huai, B.; Luo, W.; Luo, W.; Zhang, Z.; Hu, B.; and Zhang, M. 2025. Perception, Reason, Think, and Plan: A Sur-vey on Large Multimodal Reasoning Models. arXiv:2505.04921. 25865 Liu, H.; Li, C.; Wu, Q.; and Lee, Y. J. 2023. Visual Instruction Tun-ing. In Oh, A.; Naumann, T.; Globerson, A.; Saenko, K.; Hardt, M.; and Levine, S., eds., Advances in Neural Information Processing Systems , volume 36, 34892–34916. Curran Associates, Inc. Lu, P.; Bansal, H.; Xia, T.; Liu, J.; Li, C.; Hajishirzi, H.; Cheng, H.; Chang, K.-W.; Galley, M.; and Gao, J. 2024. MathVista: Eval-uating Mathematical Reasoning of Foundation Models in Visual Contexts. In The Twelfth International Conference on Learning Representations .Luo, J.; Kou, Z.; Yang, L.; Luo, X.; Huang, J.; Xiao, Z.; Peng, J.; Liu, C.; Ji, J.; Liu, X.; Han, S.; Zhang, M.; and Guo, Y. 2025. FinMME: Benchmark Dataset for Financial Multi-Modal Reason-ing Evaluation. In Che, W.; Nabende, J.; Shutova, E.; and Pile-hvar, M. T., eds., Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Pa-pers) , 29465–29489. Vienna, Austria: Association for Computa-tional Linguistics. ISBN 979-8-89176-251-0. Ma, Y.; Zang, Y.; Chen, L.; Chen, M.; Jiao, Y.; Li, X.; Lu, X.; Liu, Z.; Ma, Y.; Dong, X.; Zhang, P.; Pan, L.; Jiang, Y.-G.; Wang, J.; Cao, Y.; and Sun, A. 2024. MMLONGBENCH-DOC: Benchmark-ing Long-context Document Understanding with Visualizations. In Globerson, A.; Mackey, L.; Belgrave, D.; Fan, A.; Paquet, U.; Tom-czak, J.; and Zhang, C., eds., Advances in Neural Information Pro-cessing Systems , volume 37, 95963–96010. Curran Associates, Inc. OpenAI. 2024. Hello GPT-4o. https://openai.com/index/hello-gpt-4o/. Accessed: 2024-05-13. OpenAI. 2025. OpenAI o3 and o4-mini System Card. https: //openai.com/index/o3-o4-mini-system-card/. Accessed: 2025-04-16. Singh, A.; Ehtesham, A.; Kumar, S.; and Khoei, T. T. 2025. Agen-tic Retrieval-Augmented Generation: A Survey on Agentic RAG. arXiv:2501.09136. Singh, A.; Natarajan, V.; Shah, M.; Jiang, Y.; Chen, X.; Batra, D.; Parikh, D.; and Rohrbach, M. 2019. Towards VQA Models That Can Read. In Proceedings of the IEEE/CVF Conference on Com-puter Vision and Pattern Recognition (CVPR) .Smith, R. 2007. An Overview of the Tesseract OCR Engine. In 
+
+Ninth International Conference on Document Analysis and Recog-nition (ICDAR 2007) , volume 2, 629–633. Tanaka, R.; Nishida, K.; Nishida, K.; Hasegawa, T.; Saito, I.; and Saito, K. 2023. SlideVQA: A Dataset for Document Visual Ques-tion Answering on Multiple Images. Proceedings of the AAAI Con-ference on Artificial Intelligence , 37(11): 13636–13645. Tang, Z.; E, H.; Liu, J.; Yang, Z.; Li, R.; Rong, Z.; He, H.; Hao, Z.; Hu, X.; Ji, K.; Ma, Z.; Ji, M.; Zhang, J.; Ma, C.; Zheng, Q.; Liu, Y.; Huang, Y.; Hu, X.; Huang, Q.; Xie, Z.; and Peng, S. 2025a. Fin-MMR: Make Financial Numerical Reasoning More Multimodal, Comprehensive, and Challenging. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , 3245–3257. Tang, Z.; E, H.; Ma, Z.; He, H.; Liu, J.; Yang, Z.; Rong, Z.; Li, R.; Ji, K.; Huang, Q.; Hu, X.; Liu, Y.; and Zheng, Q. 2025b. Fi-nanceReasoning: Benchmarking Financial Numerical Reasoning More Credible, Comprehensive and Challenging. In Che, W.; Nabende, J.; Shutova, E.; and Pilehvar, M. T., eds., Proceedings of the 63rd Annual Meeting of the Association for Computational Lin-guistics (Volume 1: Long Papers) , 15721–15749. Vienna, Austria: Association for Computational Linguistics. ISBN 979-8-89176-251-0. Team, G.; Kamath, A.; Ferret, J.; Pathak, S.; Vieillard, N.; Merhej, R.; Perrin, S.; Matejovicova, T.; Ram´ e, A.; Rivi` ere, M.; et al. 2025. Gemma 3 Technical Report. arXiv:2503.19786. Wang, K.; Pan, J.; Shi, W.; Lu, Z.; Ren, H.; Zhou, A.; Zhan, M.; and Li, H. 2024. Measuring Multimodal Mathematical Reasoning with MATH-Vision Dataset. In Globerson, A.; Mackey, L.; Bel-grave, D.; Fan, A.; Paquet, U.; Tomczak, J.; and Zhang, C., eds., 
+
+Advances in Neural Information Processing Systems , volume 37, 95095–95169. Curran Associates, Inc. Wang, Q.; Ding, R.; Chen, Z.; Wu, W.; Wang, S.; Xie, P.; and Zhao, F. 2025a. ViDoRAG: Visual Document Retrieval-Augmented Generation via Dynamic Iterative Reasoning Agents. In Christodoulopoulos, C.; Chakraborty, T.; Rose, C.; and Peng, V., eds., Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , 9124–9145. Suzhou, China: Asso-ciation for Computational Linguistics. ISBN 979-8-89176-332-6. Wang, Q.; Ding, R.; Zeng, Y.; Chen, Z.; Chen, L.; Wang, S.; Xie, P.; Huang, F.; and Zhao, F. 2025b. VRAG-RL: Empower Vision-Perception-Based RAG for Visually Rich Information Understand-ing via Iterative Reasoning with Reinforcement Learning. In The Thirty-ninth Annual Conference on Neural Information Processing Systems .xAI. 2024. Grok 2 Vision Model Card. https://docs.x.ai/docs/ models/grok-2-vision-1212. Accessed: 2024-12-12. Yu, S.; Tang, C.; Xu, B.; Cui, J.; Ran, J.; Yan, Y.; Liu, Z.; Wang, S.; Han, X.; Liu, Z.; and Sun, M. 2025. VisRAG: Vision-based Retrieval-augmented Generation on Multi-modality Documents. In 
+
+The Thirteenth International Conference on Learning Representa-tions .Yu, W.; Yang, Z.; Li, L.; Wang, J.; Lin, K.; Liu, Z.; Wang, X.; and Wang, L. 2024. MM-Vet: Evaluating Large Multimodal Models for Integrated Capabilities. In Forty-first International Conference on Machine Learning .Zellers, R.; Bisk, Y.; Farhadi, A.; and Choi, Y. 2019. From Recog-nition to Cognition: Visual Commonsense Reasoning. In Proceed-ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .Zhao, Y.; Liu, H.; Long, Y.; Zhang, R.; Zhao, C.; and Cohan, A. 2024a. FinanceMATH: Knowledge-Intensive Math Reasoning in Finance Domains. In Ku, L.-W.; Martins, A.; and Srikumar, V., eds., Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 12841– 12858. Bangkok, Thailand: Association for Computational Lin-guistics. Zhao, Y.; Long, Y.; Liu, H.; Kamoi, R.; Nan, L.; Chen, L.; Liu, Y.; Tang, X.; Zhang, R.; and Cohan, A. 2024b. DocMath-Eval: Evaluating Math Reasoning Capabilities of LLMs in Understand-ing Long and Specialized Documents. In Ku, L.-W.; Martins, A.; and Srikumar, V., eds., Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 16103–16120. Bangkok, Thailand: Association for Com-putational Linguistics. Zhu, F.; Lei, W.; Huang, Y.; Wang, C.; Zhang, S.; Lv, J.; Feng, F.; and Chua, T.-S. 2021. TAT-QA: A Question Answering Bench-mark on a Hybrid of Tabular and Textual Content in Finance. In Zong, C.; Xia, F.; Li, W.; and Navigli, R., eds., Proceedings of the 59th Annual Meeting of the Association for Computational Lin-guistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers) , 3277–3287. On-line: Association for Computational Linguistics. 25866

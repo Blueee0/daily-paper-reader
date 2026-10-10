@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-001.webp",
+      "caption": "",
+      "page": 2,
+      "index": 1,
+      "width": 747,
+      "height": 619
+    },
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-002.webp",
+      "caption": "",
+      "page": 2,
+      "index": 2,
+      "width": 747,
+      "height": 619
+    },
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-003.webp",
+      "caption": "",
+      "page": 5,
+      "index": 3,
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-004.webp",
+      "caption": "",
+      "page": 5,
+      "index": 4,
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-005.webp",
+      "caption": "",
+      "page": 5,
+      "index": 5,
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-006.webp",
+      "caption": "",
+      "page": 12,
+      "index": 6,
+      "width": 1403,
+      "height": 636
+    },
+    {
+      "url": "assets/figures/eccv-2026-accepted-program/eccv-2026-909a17ffea7b938b00cc0eb9/fig-007.webp",
+      "caption": "",
+      "page": 12,
+      "index": 7,
+      "width": 1260,
+      "height": 748
+    }
+  ]
+}

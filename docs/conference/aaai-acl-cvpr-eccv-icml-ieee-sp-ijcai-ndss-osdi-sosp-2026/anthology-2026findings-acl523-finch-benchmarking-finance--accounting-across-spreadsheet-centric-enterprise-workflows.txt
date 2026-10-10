@@ -1,0 +1,682 @@
+Title: 2026.findings-acl.523.pdf
+
+URL Source: https://aclanthology.org/2026.findings-acl.523.pdf
+
+Published Time: Thu, 11 Jun 2026 02:31:19 GMT
+
+Number of Pages: 27
+
+Markdown Content:
+> Findings of the Association for Computational Linguistics: ACL 2026 , pages 10768–10794 July 2-7, 2026 ©2026 Association for Computational Linguistics
+
+# FINCH : Benchmarking Finance & Accounting across Spreadsheet-Centric Enterprise Workflows 
+
+Haoyu Dong 1,2 * Pengkun Zhang 3 Yan Gao 5 Xuanyu Dong 6 Yilin Cheng 4,7 
+
+Mingzhe Lu 1 Adina Yakefu 8 Shuxin Zheng 4,5 1University of Chinese Academy of Sciences 2Microsoft 3South China University of Technology 
+
+> 4
+
+Zhongguancun Academy 5Zhongguancun Institute of Artificial Intelligence 6Harvest Fund 
+
+> 7
+
+Fudan University 8Hugging Face 
+
+Abstract 
+
+We introduce FinWorkBench (a.k.a. F INCH )for evaluating AI agents on real-world, enterprise-grade finance and accounting work-flows that interleave data entry, structuring, for-matting, web search, cross-file retrieval, cal-culation, modeling, validation, translation, vi-sualization, and reporting. F INCH is sourced from authentic enterprise workspaces from En-ron (15,000 files and 500,000 emails) and other financial institutions, covering the period 2000– 2025, preserving in-the-wild messiness of mul-timodal artifacts such as tables and charts, across diverse domains such as budgeting, trad-ing, asset management, and operational man-agement. We propose a workflow construction process that combines LLM-assisted mining of work-flows from authentic enterprise environments with expert annotation: (1) LLM-assisted, expert-verified derivation of workflows from real-world email threads and spreadsheet ver-sion histories, and (2) meticulous annotation requiring over 700 hours of expert effort. This yields 172 composite workflows with 384 tasks, involving 1,710 spreadsheets with 27 million cells, along with PDFs and other artifacts, cap-turing the intrinsically messy, long-horizon, knowledge-intensive, and collaborative nature of real-world enterprise work. We conduct both human and automated evalua-tions of frontier AI systems, including GPT 5.1, Claude Sonnet/Opus 4.5, Gemini 3 Pro, Grok 4, and Qwen 3 Max. Under human evaluation, GPT 5.1 Pro spends an average of 16.8 minutes per workflow yet passes only 38.4% of work-flows. Comprehensive case studies further sur-face the challenges that real-world enterprise workflows pose for AI agents.  
+
+> *Corresponding to donghaoyu82@gmail.com. Author list: Appendix A.
+
+1 Introduction 
+
+Frontier AI systems are increasingly transforming professional workspaces. AI-assisted tools like Claude (Anthropic, 2025a), OpenClaw (OpenClaw, 2025), ChatGPT (OpenAI, 2025), Gemini (Google, 2024), and Copilot (Microsoft, 2024) are now em-bedded in daily enterprise workflows—helping pro-fessionals draft documents, explore data, manip-ulate spreadsheets, and generate reports. They are particularly impactful in finance and account-ing (F&A), a high-stakes, knowledge- and labor-intensive domain critical to every organization. However, real-world F&A work is inherently 
+
+messy with substantial contextual complexity: ar-tifacts are interconnected across heterogeneous spreadsheets, PDFs, and more, evolving through multiple versions with collaborative edits (Klimt and Yang, 2004); spreadsheets contain large, com-plex structures (Dong et al., 2024) with cross-sheet references, intricate layouts, inconsistent format-ting, cryptic terms, erroneous formulas, and mul-timodal artifacts such as charts, images, and code. It is also long-horizon (Patwardhan et al., 2025): workflows demand multi-step reasoning spanning data entry, editing, retrieval, calculation, modeling, validation, reporting, and more. This raises a key question: Can today’s frontier AI agents actually handle the messy, long-horizon, and knowledge-intensive workflows that profession-als face daily? 
+
+To answer this, we introduce F INCH , a F&A benchmark sourced from authentic enterprise envi-ronments. F INCH captures the intrinsic complexity of professional work through: • In-the-wild enterprise sourcing : FINCH 
+
+is built around authentic enterprise spread-sheets, emails, and PDFs from real-world en-terprise workspaces—primarily Enron (En-
+
+10768 ronData.org) (about 15,000 spreadsheet files and 500,000 emails from 150 employees) and EUSES (Fisher and Rothermel, 2005) (about 450 financial spreadsheet files from various sources), along with securities and asset man-agement firms, global organizations such as World Bank (Bank, 2024), and Canadian and British governments (Department of Finance Canada, 2025; HM Treasury, 2023). Docu-ments are large, cross-referenced, and messy— containing rich multimodal artifacts such as tables, formulas, charts, pivots, and images. • Rigorous construction process : We pro-pose a novel workflow construction pipeline grounded in the real collaborative context of emails and versioned artifacts. We in-duce workflows from enterprise email threads and attachments, where collaborators natu-rally describe, discuss, and track workflows as part of their daily work. We further use an LLM-assisted, expert-verified method to derive workflows by analyzing changes across versioned spreadsheets, surfacing the underly-ing goals that drive professionals’ work. An-notators must reason over large multi-sheet workbooks and subtle version deltas to infer underlying workflows, making the annotation process substantially more difficult than curat-ing QA pairs over isolated tables. We compile 172 meticulously annotated, enterprise-grade workflows built on 1,710 spread-sheets, along with PDFs and other artifacts, collectively capturing the compositional, messy, knowledge-intensive, and collaborative nature of real work. Each workflow spans one or more in-terdependent tasks—data entry, editing, retrieval, calculation, modeling, validation, translation, vi-sualization, and reporting—mirroring how profes-sionals actually work on artifact manipulation and creation. These workflows cover a broad set of enterprise domains such as trading and risk man-agement, planning and budgeting, pricing and val-uation, and asset management. Evaluating such workflows poses nontrivial chal-lenges, because F INCH tasks usually involve com-plex and large spreadsheets and require assessing both structural correctness and semantic fidelity be-yond exact matching. To address this, we provide both expert human evaluation and a scalable LLM-as-judge pipeline. Human evaluation serves as the gold standard, judging whether a workflow has been satisfactorily completed end-to-end. In par-allel, we introduce an efficient multimodal LLM-as-judge evaluation method that compares inputs, model outputs, and reference artifacts using struc-tured diffs, compact snapshots, and multimodal renderings, enabling reliable assessment at scale. We evaluate frontier AI systems including Claude Sonnet/Opus 4.5, GPT 5.1, Gemini 3, Grok 4, and Qwen 3 using both expert evaluation and automated pipeline. Even the strongest agents pass fewer than 50% of workflows: GPT 5.1 Pro spends 16.8 minutes per workflow on average yet achieves 38.4% under human evaluation. Case analyses show that failure is driven by the combination of real-world complexity rather than any single bottleneck. GPT 5.1 Pro drops from 44.3% on workflows with ≤2 tasks to 23.5% on those with >2 tasks. Agents also struggle with irregular spreadsheet structure, latent business logic in formulas, and heterogeneous artifacts; on the 20 workflows involving PDFs, images, or Word documents, GPT 5.1 Pro achieves only 35.0%. 
+
+2 FINCH : A Real-world Finance & Accounting Workflow Benchmark 
+
+2.1 Dataset Construction 
+
+Echoing the existentialist dictum that existence pre-cedes essence (Sartre, 1946), we argue that profes-sional work should be observed in authentic enter-prise environments before it is formally defined. Motivated by this, we propose a novel workflow construction pipeline grounded in authentic collab-orative context of emails, versioned spreadsheets, and final deliverable spreadsheets and reports. All workflows derived from these sources are consolidated into a unified schema with consis-tent fields (NL instruction, input files, reference outputs), and each workflow is tagged with task types (e.g., data entry/import, structuring, valida-tion) and business types (e.g., planning and bud-geting, pricing and valuation, operations, asset management). Note that the reference outputs may include both file-based reference answers (for most generation/editing cases) and textual refer-ence answers (for a small number of QA and sum-mary/visualization cases). 
+
+2.1.1 Workflow Derivation from Enterprise Email Threads 
+
+We first mine real-world enterprise email threads to surface workflows. Starting from the Enron Email 10769 Online Sources 
+
+> Data Vendors
+> Python Packages
+
+Search Parameters 
+
+Dividend  000922.CSI 
+
+Growth  399370.SZ 
+
+Start Date  2004/12/31 
+
+End Date  2025/11/5 
+
+A B C
+
+13  Date  000922.CSI  399370.SZ 
+
+14  2004-12-31  1000.0000  878.1710 
+
+15  2005-01-04  981.5550  861.9958 
+
+16  2005-01-05  986.5350  867.8566 
+
+17  2005-01-06  975.5260  858.8290 
+
+18  2005-01-07  980.7170  860.6270 
+
+19  2005-01-10  989.5290  869.8089 
+
+20  2005-01-11  990.2840  872.3875 
+
+21  2005-01-12  989.8200  872.7026  
+
+> Collect Cleaning
+> Consistency Validation
+
+A B
+
+Model Parameters 
+
+9 MA  60 
+
+10  Deviation Limit  10% 
+
+11  Timing Model  Method 1 
+
+Method 1: Go Long Index 1: When Moving Average is either rising or flat, AND the Deviation Rate falls within the specified open interval. Go Long Index 2 ( i.e., -1 ): When Price <= Moving Average, AND Deviation Rate falls within the specified open interval. Otherwise: Maintain the most recent. 
+
+D E
+
+13  Relative Change  MA 
+
+14  1.139  1.139 
+
+15  =B15/C15  1.139 
+
+16  1.137  1.138 
+
+17  1.136  1.138 
+
+18  1.140  1.138 
+
+F
+
+13  Bias Ratio 
+
+14  0.000 
+
+15  0.000 
+
+16  0.001 
+
+17  0.001 
+
+18  0.001 
+
+Signal 
+
+Row  Position  Strategy 
+
+Net Value  Benchmark  Timing 
+
+Return 
+
+Benchmark 
+
+Return 
+
+Excess 
+
+Return 
+
+Cumulative Excess 
+
+Return 
+
+Number of 
+
+Signals 
+
+14  1 1.00  1.00  0.00  0.00  0.00  1.00  1.00 
+
+15  1 0.98  0.98  -0.02  -0.02  0.00  1.00  2.00 
+
+15  0 0.99  0.99  0.01  0.01  0.00  1.00  0.00 
+
+15  0 0.98  0.98  -0.01  -0.01  0.00  1.00  0.00 
+
+18  0 0.98  0.98  0.00  0.00  0.00  1.00  2.00 
+
+Timing model ’s performance 
+
+> =IF(AND( E14 >= E15 ,F15 <$B$10 ),-1,IF(AND( E14 <= E15 ,F15 <$B$10 ),1,0)) =AVERAGE(OFFSET( D15 ,0,0,MAX(13 -ROW( B15 ), -$B$9 ),1))
+> =ABS( D15 /E15 -1)
+> Cross-sheet/
+> file Retrieval
+
+Strategy Return (Aggregated) 
+
+Return  Sharpe Ratio  Maximum Drawdown (MDD) 
+
+9.91%  0.376  75.59% 
+
+Benchmark Return (Aggregated) 
+
+Return  Sharpe Ratio  Maximum Drawdown (MDD) 
+
+9.16%  0.362  72.03% 
+
+Average Annual Trades 
+
+Comparison with Benchmark 
+
+Return Improvement 
+
+Drawdown Improvement 
+
+12.35  0.74%  -1.56% 
+
+NAV chart: Rotation  vs  Benchmark       
+
+> =IF( $B$ 11 =“Method 2 ”, U15,T15)
+> Finance Modeling & Calculation
+> Visualization
+> Report / Formatting
+> Finance Modeling & Calculation
+> Web Search /
+> Data Entry
+> Import
+> 𝐸𝑥𝑐𝑒𝑠𝑠 𝑡
+> = 𝑅𝑒𝑡 𝑡 𝑡𝑖𝑚𝑖𝑛𝑔 − 𝑅𝑒𝑡 𝑡 𝑏𝑒𝑛𝑐ℎ
+> 𝑀𝐷𝐷 = max
+> 𝜇 (𝑃𝑒𝑎𝑘 ≤𝜇 − 𝑁𝑉 𝜇
+> 𝑃𝑒𝑎𝑘 ≤𝜇
+> )
+> 𝑅𝑒𝑡𝑢𝑟𝑛 = 𝑁𝑉 𝑒𝑛𝑑
+> 𝑁𝑉 𝑠𝑡𝑎𝑟𝑡
+> − 1
+> 𝐶𝑢𝑚𝐸𝑥𝑐𝑒𝑠𝑠 𝑡
+> = 𝐶𝑢𝑚𝐸𝑥𝑐𝑒𝑠𝑠 𝑡−1 × (1 + 𝐸𝑥𝑐𝑒𝑠𝑠 𝑡 )
+
+…
+
+I J
+
+13  Signal_ori  Signal 
+
+14  1 1
+
+15  -1  =IF(I15=0,J14, I15) 
+
+16  -1  -1 
+
+17  -1  -1 
+
+18  1 1
+
+T
+
+13  Method 1 
+
+14  1
+
+15  -1 
+
+16  -1 
+
+17  -1 
+
+18  1
+
+> =M14*(L15*B15/B14+(1 -L15)*C15/C14) Formulas:
+
+Figure 1: Illustration of an end-to-end predictive modeling workflow involving web search, data import, cross-sheet retrieval, calculation, and visualization. More illustrative examples in F INCH are presented in Appendix G. 
+
+Corpus, we prompt GPT-5 to identify collaborative messages that (i) explicitly state a business goal (e.g., “update the RAC rankings” or “revise the 2002 allocations”) and (ii) reference one or more attached spreadsheets. For each selected thread, the model summarizes the communicative intent and articulates a workflow description. As illustrated in Figure 2, in the strongly grounded case, both the input and the reference artifacts for a workflow are already present as attachments in the email thread (e.g., an initial ranking file and its corrected version). While strongly grounded cases are highly motivating for this benchmark, they are relatively rare. In the par-tially grounded case, the email specifies a clear goal, but only the input artifacts or the reference outputs are attached. Across both cases, human experts normalize con-versational email text and LLM-drafted descrip-tions into workflow instructions and abstract away idiosyncratic details while preserving the business intent. Annotators need to carefully verify and revise attachments to align with the instructions. 
+
+2.1.2 Workflow Derivation from Versioned Spreadsheets 
+
+Beyond explicit messages in email threads, we pro-pose to discover workflows that are implicitly cap-tured in spreadsheet version histories, as illustrated in Figure 2(c). We collect families of versioned workbooks from the Enron and EUSES repositories and apply an LLM-based differencing procedure Email + strongly grounded 
+
+attachments discovered by 
+
+LLMs (Enron Email Corpus) 
+
+Email + partially grounded attachments discovered by LLMs (Enron Email Corpus) 
+
+Figure 2: Illustration of real-world enterprise emails with attached artifacts. 
+
+that recognizes consecutive versions and infers the underlying workflow. For each aligned pair of versions, we prompt GPT-5 to propose (i) one or more workflow types (e.g., “date-stamped versioning, assumption up-dates, and error correction”, “data entry, structur-ing, and visualization”) and (ii) a detailed NL de-scription of all changes. Human experts then vali-date and refine these LLM-induced workflow can-didates. They first determine whether the proposed diffs constitute a coherent and meaningful work-flow rather than incidental churn. For accepted cases, they (i) rewrite the draft description into a precise task instruction that describes the transfor-10770 Figure 3: Distribution of number of tasks per workflow and task types across business types. 
+
+mation, and (ii) edit the corresponding workbook versions so that the input and reference files cleanly realize the described workflow without introducing unexpected out-of-scope changes. 
+
+2.1.3 Workflow Sourced from Final Deliverable Spreadsheets and Reports 
+
+Third, we curate workflows from high-quality arti-facts drawn from the Enron and EUSES corpora, as well as from various investment and securities com-panies (e.g., Figure 1), international organizations, and national governments. Domain experts author realistic workflow instructions and construct input and reference files based on final deliverable arti-facts. For example, a valuation model from an in-vestment firm can be turned into a financial model-ing task; a World Bank report can be used to define a summarization and visualization task; and bilin-gual reports from the Canadian government can be used to construct translation tasks. To broaden coverage of web search and multi-source QA, we adapt 10 financial cases from WideSearch (Wong et al., 2025) into web-search-centric workflows and extend them into multi-step calculation and visual-ization pipelines. We further leverage 3 examples from DABStep (Egg et al., 2025) to construct multi-source question answering workflows. We rely on WideSearch’s annotations without further revision, as they are supported by extensive web-crawled information available for validation. 
+
+2.1.4 Quality Control 
+
+Given the high complexity of each workflow, we adopt a rigorous multi-stage quality control pro-cess. All workflows are annotated and reviewed by a team of five experts: two annotators with inter-disciplinary backgrounds in finance and computer science, and three annotators with computer sci-ence backgrounds. Among them, three annotators (including one female) have over nine years of in-dustry experience, and two are outstanding Ph.D. or master’s students. Annotators are instructed to skip workflows that are similar to existing ones to maximize diversity. Every workflow is validated by at least two indepen-dent annotators: about 40% of workflows undergo at least one round of revision, and particularly com-plex cases require multiple iterations. More details can be found in Appendix C. In addition, ChatGPT and Claude are used as secondary checkers to flag potential issues, which are always verified by hu-man experts. Together, these procedures required over 700 hours of expert annotation. 
+
+2.2 Dataset Characteristics 
+
+FINCH comprises 172 meticulously annotated, enterprise-grade workflows that collectively cap-ture the compositional, messy, multimodal, and collaborative nature of F&A work. All workflows are labeled exclusively for evaluation and are not intended for training. Across these workflows, the corpus contains 1,710 spreadsheets (956 distinct ones in 301 Excel files) together with 17 PDFs, 12 images, 3 Word documents, as well as JSON, CSV, and Markdown. 20 workflows involve file types beyond spreadsheets. This mixture reflects how real analysts coordinate over heterogeneous artifacts rather than clean, single-table inputs. Figure 3 provides an overview of the task and business coverage in F INCH . This distribution high-lights that F INCH targets realistic, core enterprise workflows rather than curated toy tasks. More de-tails can be found in Appendix B. 
+
+2.2.1 Task Compositionality 
+
+FINCH is explicitly designed around composite workflows rather than isolated tasks. As shown in Figure 3, only 37 workflows (21.5%) are single-task; the remaining 135 (78.5%) involve multiple tasks. These tasks are not independent subtasks, but are interleaved around shared spreadsheets and files. A typical workflow may begin with structur-ing raw data, proceed to cross-sheet or cross-file retrieval, and then culminate in calculations, mod-10771 eling, or reporting. The distribution in Figure 3 shows that most workflows weave multiple tasks. Importantly, each “task” itself typically requires substantial multi-turn reasoning: for example, web search often entails many rounds of LLM calls to discover, filter, and verify evidence; cross-sheet retrieval requires iterative calls to read and locate key information across multiple sheets; and calcu-lation usually spans many formulas distributed over different rows and columns. To further characterize the practical complex-ity of F INCH workflows, we conduct a case study on tool-call overhead using Claude Coworker (Opus 4.6) on 20 representative tasks (Appendix F). Excluding two extremely tool-intensive web-search workflows that require 71 and 107 tool calls respec-tively, the remaining tasks range from 6 to 25 tool calls (median 14). Notably, tool-call overhead does not scale linearly with the number of tasks; intrin-sic task complexity—such as the depth of business-logic reasoning and cross-sheet dependencies—is a stronger driver. These findings suggest that even single- or two-task workflows can demand substan-tial multi-step agent interaction, reinforcing that FINCH captures meaningful operational complex-ity beyond what task counts alone convey. 
+
+2.2.2 Messiness 
+
+The source files in F INCH are large and intercon-nected. At the file level, 86.6% of workflows in-volve more than one file when counting both input and reference artifacts, and a workflow may touch up to 14 distinct files. At the spreadsheet level, 92.4% of workflows involve multiple input and reference sheets, with an average of 8 sheets and a long tail reaching up to 91 sheets. The median workflow covers 15K cells (157K on average), with the largest one scaling to 3.7 million cells. 
+
+> Figure 4: Distribution of the number of cells and sheets.
+
+Moreover, most spreadsheets exhibit multimodal artifacts and intricate structures such as hierarchi-cal headers, merged cells, and other irregularities. On average, a workflow involves 21.5K formulas (with a median of 212), reflecting deeply nested cal-culations and long dependency chains. In addition, 20.3% of workflows include charts, while 7.6% explicitly require reasoning over PDFs or images. 
+
+2.3 Evaluation Method 2.3.1 Human Evaluation 
+
+We conduct human evaluation on all workflows to directly assess model performance. For each workflow, annotators read the NL instruction and inspect the input, reference, and model output files side by side (typically by aligning spreadsheets or documents in adjacent tabs) to determine whether the model has faithfully completed the requested task. A workflow is marked as successful only if the model generates or revises content and struc-ture in accordance with the instruction, without in-troducing critical errors, omissions, or unintended changes; otherwise, it is labeled as a failure. Importantly, evaluation is based on whether the instruction has been satisfactorily fulfilled rather than on a purely mechanical comparison between the model and reference outputs, since multiple ac-ceptable solutions may exist for summarization, vi-sualization, formatting, structuring, formulas, and related aspects. To reduce subjectivity and ambigu-ity, annotators ultimately assign a binary pass/fail label to each workflow. 
+
+2.3.2 LLM-as-Judge Evaluation 
+
+To scale evaluation, we employ an LLM-as-judge framework that supports three file processing types: 
+
+modification (editing input artifacts), generation 
+
+(creating new workbooks or documents), and QA 
+
+(answering questions based on one or more arti-facts). The framework accepts heterogeneous and large inputs—including .xlsx , .txt , .docx , .md ,
+
+.pdf , and images—and normalizes them efficiently into multimodal context for the judge model. For spreadsheet modification tasks, instead of en-coding full inputs and outputs separately—which would consume a large number of tokens when working with sizable artifacts—the framework computes structured diffs between the input and the reference output ( diff_ref ), as well as between the input and the model output ( diff_model ). In addition, it constructs a compact input snapshot 
+
+(snapshot ) that, for each modified sheet, retains only the first and last ten rows and the first five columns—typically capturing table headers and overall layout—along with all rows and columns containing modified cells. This design preserves the critical context required to interpret diff_ref 
+
+and diff_model while substantially reducing to-10772 Instruction  
+
+> Input files
+> Reference outputs
+> Workflow Workflow
+> Completeness
+> Correctness
+> Over-edit avoidance
+> Eval Rubrics
+> Pass
+> Fail
+> Eval Output
+> Input →Reference outputs (diff_ref)
+> Input →Model outputs (diff_model)
+> Eval Input (File Modification)
+> Instruction
+> Reference outputs & Model outputs
+> Screenshots
+> Eval Input (File Generation & QA)
+> Instruction & Input file snapshots
+> Model outputs Readability Screenshots
+> …
+
+Figure 5: Illustration of automated evaluation pipeline. 
+
+ken usage. In parallel, the framework renders 
+
+screenshots of sheets with changes from the input, reference, and model output, enabling the judge to perceive merged cells, conditional formatting, charts, and other layout-sensitive properties. For generation tasks, the method extracts all text, cell values, and formulas from both the reference and the model output, and captures screenshots of every sheet/doc, since all contents should be ver-ified rather than just local edits. For QA tasks, it feeds the reference answer and the model’s re-sponse, augmented with relevant input artifacts when the question requires grounding. Although different file processing strategies are used, they share common evaluation rubrics on (i) completeness with respect to the natural lan-guage instruction, (ii) numerical and logical cor-rectness of derived values and formulas, (iii) over-edit avoidance , penalizing unnecessary or unex-pected changes beyond the instruction, and (iv) readability of the formatting and structure. Ex-act cell-by-cell equality with the reference is not required when multiple solutions are acceptable (e.g., alternative layouts, equivalent formulas, or different but semantically equivalent summaries); instead, the judge determines whether the model has satisfactorily fulfilled the instruction. To re-duce subjectivity, the judge outputs a binary score (pass/fail) along with a short natural language ra-tionale for expert review and validation. For web search tasks, the rubric permits a 1% tolerance band, allowing for precision discrepancies across different data sources. This LLM-as-judge framework not only auto-mates large-scale evaluation but also surfaces sub-tle errors (such as formulas silently replaced with static values) that are difficult to catch with GUI-based human inspection alone. In Section 3.2, we report the consistency between human and auto-mated evaluations and show that the LLM-as-judge scores closely align with human judgments. Look-ing forward, agentic evaluation is quite promising for future work for flexible workflow evaluation. 
+
+3 Experiments 
+
+3.1 Baselines 3.1.1 Product-side Agents 
+
+We evaluate two frontier product-side agents: (i) 
+
+ChatGPT using GPT 5.1 in Pro mode, and (ii) 
+
+Claude using Opus 4.5 or Sonnet 4.5 in Think-ing mode. We focus on these two systems (rather than Gemini or Grok) because they natively return downloadable artifacts (e.g., spreadsheets) for hu-man inspection, instead of emitting executable code or intermediate markdown tables. For both agents, we enable external web browsing but disable ac-cess to historical chats, so that each workflow is evaluated independently without cross-run leakage. 
+
+3.1.2 API-based Models 
+
+We evaluate five frontier LLMs via APIs (Table 7). We adopt SpreadsheetBench (Ma et al., 2024) as our baseline framework because it provides a prin-cipled code-generation paradigm for spreadsheets, enabling complex spreadsheet operations that can-not be reliably captured by text-only outputs. Since SpreadsheetBench was originally designed for relatively small and clean spreadsheets, we ex-tend it with richer encodings and multimodal in-put support to scale to the large and messy enter-prise workflows in F INCH . We preserve its single-call setting to enable fair comparison across differ-ent LLMs without substantial framework changes. This setting may underestimate model performance, however, because it precludes iterative interaction, execution feedback, and self-correction mecha-nisms that product-side agents can leverage. Addi-tional details are deferred to Appendix D. 
+
+Spreadsheet Encoding. SpreadsheetBench pro-duces text tables without preserving cell addresses, data types, or formulas. We leverage Spread-sheetLLM (Dong et al., 2024)’s address-based en-coding and introduce a semantic-rich markdown encoding . Each sheet begins with its name and the corresponding data range (e.g. ## Sheet: [name] (A1:Z100) ), using a Markdown-based for-mat for serialization. Each cell is encoded as a tu-ple (Address, Value, Type, Formula) , where 
+
+Address denotes the cell reference (e.g. A3 ), Type 
+
+indicates the data type ( T = Text, I = Integer, F =Float, D = Date, B = Boolean), and Formula records the cell formula (e.g., =SUM(A1:A10)->100 ). 10773 Multimodal Input Handling. We extend the framework to support multimodal inputs involv-ing images and PDFs, detailed in Appendix D.          
+
+> Model Pass Rate (%)
+> GPT-5.1 Pro (Product) 41.9 Claude Sonnet 4.5 (Product) 29.1 Claude Opus 4.5 (Product) 43.0 GPT-5.1 (API) 32.0 Claude Sonnet 4.5 (API) 20.3 Gemini 3 Pro Preview (API) 27.3 Grok 4 (API) 23.8 Qwen 3 Max (API) 14.5
+
+Table 1: Automated LLM-as-judge evaluation results on F INCH workflows. 
+
+3.2 Experimental Results Product-side agents. As shown in Table 1 (auto-mated evaluation using GPT-5-mini as the judge) and Table 6 (human evaluation), ChatGPT 5.1 Pro and Claude Opus 4.5 achieve the strongest over-all pass rates on F INCH . Their advantage largely comes from interactive affordances: they can it-eratively inspect spreadsheets, revise intermediate states, and recover from partial errors through mul-tiple tool calls. However, even these frontier agents solve fewer than 50% of workflows under human evaluation, suggesting that real-world finance and accounting work remains far from “solved.” The human evaluation results in Table 2 high-light long-horizon composition as a key bottle-neck: when a workflow contains more than two tasks, the pass rate drops sharply—GPT 5.1 Pro falls from 44.3% for workflows with ≤ 2 tasks to 23.5% for workflows with > 2 tasks. We also ex-amine how GPT 5.1 Pro’s completion time scales with workflow length (Table 2). On average, single-task workflows take 13.1 minutes, while workflows with two and three tasks require 17.4 and 18.7 min-utes, respectively, reflecting the increased compo-sitional complexity of multi-task settings. Inter-estingly, workflows with 4 or more tasks show a lower average time (17.4 minutes) than workflows with 3 tasks, most of which involve web search and almost all of which result in failure. The longest in-dividual run takes roughly 60 minutes yet still fails, underscoring the difficulty of highly compositional workflows for current agents. Pass rates also vary substantially by task type 
+
+(Table 3). Data Entry / Import and Structuring / Formatting are among the most challenging cat-egories, consistent with the messy layouts, irreg-               
+
+> Tasks per workflow # Workflows Pass (%) Time (min) 137 48.6 13.1 284 42.4 17.4 333 33.3 18.7
+> ≥418 5.6 17.4
+
+Table 2: GPT-5.1 Pro’s pass rates and completion time by workflow composition (human evaluation). 
+
+ular tables, and multi-sheet structures in F INCH .Data Entry / Import is also frequently coupled with web search, a known difficult setting (Wong et al., 2025). Notably, Translation—where mod-ern LLMs typically excel in standard NLP bench-marks—performs poorly in F INCH , as finance-heavy tables make it easy to distort or omit crit-ical structural cues (e.g., header hierarchies and row/column alignment). Detailed error analysis is provided in Section 3.3.                     
+
+> Pass Rate by Task Type(%) GPT-5.1 Pro Sonnet 4.5
+> Data Entry / Import 25.0 13.6 Structuring / Formatting 29.1 25.6 Web Search 9.1 0.0 Cross-sheet/file Retrieval 35.1 13.5 Calculation 39.2 24.2 Validation / Review 37.8 21.6 Financial Modeling 33.3 20.0 Translation 0.0 0.0 Summary / Visualization 36.4 27.3
+
+Table 3: Pass rates by task type for GPT-5.1 Pro and Claude Sonnet 4.5 under human evaluation. For com-posite workflows, we use workflow-level correctness: a task is counted as correct only if the entire workflow succeeds; if a workflow fails, all tasks it contains are counted as incorrect. 
+
+In addition, we examine performance on a sub-set of 20 workflows that involve non-spreadsheet artifacts (e.g., PDFs, Word documents, and im-ages). As shown in Table 4, GPT 5.1 Pro achieves a 35.0% pass rate on these workflows (7/20), lower than its overall rate of 38.4%, while Claude Son-net 4.5 achieves 25.0% (5/20), matching its overall rate. This suggests that handling heterogeneous document types introduces additional challenges.       
+
+> Pass Rate Overall Other file types
+> GPT-5.1 Pro (Product) 38.4% 35.0% Claude Sonnet 4.5 (Product) 25.0% 25.0%
+
+Table 4: Pass rates on workflows involving non-spreadsheet artifacts (e.g., PDFs, Word documents, and images) under human evaluation. 10774 Beyond binary pass/fail, our LLM-as-judge framework provides rubric-level scores along four dimensions: completeness , correctness , over-edit avoidance , and readability . Table 5 reports these scores for the two Claude product-side agents. Cor-rectness is the primary bottleneck: Sonnet 4.5 achieves 55.8% completeness but only 36.0% cor-rectness. These scores are produced by GPT-5-mini using structured output, where a single call assigns all four scores jointly; this may introduce inter-rubric confusion. More robust agentic evaluation methods are a worthwhile direction for future work.           
+
+> Rubric (%) Sonnet 4.5 Opus 4.5
+> Completeness 55.8 69.8 Correctness 36.0 45.3 Over-edit Avoidance 55.8 64.0 Readability 65.1 74.4
+> Table 5: Rubric-level scores in automated evaluation.
+
+API-based models. Table 1 shows that API-based baselines are generally weaker than offi-cial product-side agents. Under automated eval-uation, GPT 5.1 Pro reaches 41.9% pass rate, whereas GPT 5.1 with our API-based agent de-sign reaches 32.0%. A key limitation of the API baselines is the single-call setting, which precludes iterative interaction, execution feedback, and self-correction—an important direction for future work on enterprise-grade agents. Despite this constraint, our design narrows the gap by using more efficient spreadsheet encodings and task-appropriate tool outputs within the single-call budget. 
+
+Consistency Between Human and Automated Evaluation As shown in Table 6, the automated evaluation largely aligns with human judgments: for GPT 5.1 Pro and Claude Sonnet 4.5, the GPT-5-mini judge agrees with human labels on 82.1% and 90.2% of workflows, respectively. The judge also achieves high recall (83.3% and 88.4%), meaning it recovers most human-labeled passes. Replacing GPT-5-mini with the stronger GPT-5.1 judge yields lower automated pass rates (37.2% and 23.2%, re-spectively), bringing them closer to human scores. We adopt GPT-5-mini as the judge to avoid using the same model for both evaluation and the API-based baselines. On the model side, the LLM judge can occa-sionally miss nuances in the rubric—either failing to catch subtle visual or numerical errors in large spreadsheets or, conversely, being overly literal Product Automated (%) Human (%) GPT-5-mini GPT-5.1 GPT 5.1 Pro 41.9 37.2 38.4 Sonnet 4.5 29.1 23.2 25.0 
+
+> Table 6: Comparison of automated LLM-as-judge pass rates using different judges and human evaluation on product-side agents. Human evaluation serves as the gold standard. Since Opus 4.5 has been newly released, we did not perform human evaluation for it.
+
+about certain instructions (e.g., penalizing benign formula-to-constant conversions). However, we also observe cases where the LLM-based judge is correct but human raters are wrong—for exam-ple, when formulas are silently replaced with static values, which are difficult to detect through GUI-based inspection alone. On the system side, limita-tions of our spreadsheet tooling and data pipeline (e.g., incomplete support for corrupted but human-readable workbooks or uncommon file formats) can cause valid outputs to be marked as failures. Taken together, these factors mean that our auto-mated scores should be interpreted as approximate rather than exact, and that human review remains important for borderline or high-impact workflows. 
+
+3.3 Error Analysis 
+
+To understand the sources of failure on F INCH , we conducted a qualitative error analysis of GPT 5.1 and Claude Sonnet 4.5, considering both product-side agents and API-based models. For all failed workflows in our evaluation, we manually in-spected the trajectories and annotated the primary cause of failure. From a workflow-centric perspective, we iden-tify five dominant categories of error. Take the Claude Sonnet 4.5 product-side agent as an ex-ample. Across all examined failures, 10% stem from task misunderstanding : enterprise tasks often rely on implicit context in artifacts (e.g., spread-sheets), which models frequently overlook, leading them to misinterpret what is being asked and the required deliverable. 25% are data retrieval errors ,including selecting the wrong cross-sheet, cross-table, or intra-table row/column ranges. 35% arise from formula reasoning errors , such as failing to reconstruct the latent business logic encoded in for-mulas or deriving incorrect new formulas. 25% are due to code generation errors , where generated scripts (e.g., Python with spreadsheet APIs) are 10775 syntactically invalid or misaligned with the spread-sheet layout. The remaining 5% correspond to data rendering errors , including incorrect formatting, misconfigured charts, or flawed final reports that deviate from the requested layout or narrative—for example, creating a brand-new spreadsheet instead of modifying the original one as requested. We also compare error patterns between web-based agents and API-based setups, with details provided in Appendix E.1. Notably, these errors largely arise from generic capabilities that modern LLMs already appear to master in isolation on many existing benchmarks. The sharp degradation on F INCH therefore stems not from the absence of these abilities, but from their composition within realistic enterprise Fi-nance & Accounting workflows. In F INCH , in-dividual workflows simultaneously involve large and fragmented spreadsheet ecosystems, dense and semantically homogeneous financial content, irreg-ular table structures, latent business logic encoded in formulas, and multimodal artifacts spanning spreadsheets, PDFs, charts, and other documents. When these challenges co-occur, small local er-rors—such as minor retrieval mistakes or misinter-preted structures—are easily amplified and propa-gate across long-horizon execution, ultimately lead-ing to workflow-level failure. Taken together, these observations suggest that FINCH does not require fundamentally new model abilities; rather, it probes existing capabilities un-der an enterprise “extreme” regime characterized by high complexity, noise, and long-horizon de-pendencies that closely mirror real F&A work. A detailed breakdown and concrete examples of these error factors are provided in Appendix E.2. 
+
+4 Related Work 
+
+The integration of LLMs into enterprise produc-tivity tools has accelerated dramatically in recent years. The recently launched ChatGPT Agent (Ope-nAI, 2025) extends these capabilities to financial and accounting spreadsheet automation. Major pro-ductivity suites such as Microsoft 365 and Google Workspace have also integrated LLMs (e.g., Copi-lot and Gemini) to support document drafting, spreadsheet analysis, and workflow automation through natural language interaction (Microsoft, 2024; Google, 2024). Anthropic’s Claude Excel has similarly entered the enterprise space with spreadsheet automation capabilities (Anthropic, 2025b). In parallel, a growing body of research has emerged on agentic spreadsheet processing (Li et al., 2023a; Chen et al., 2025; Zhu et al., 2025; Ma et al., 2024; Wang et al., 2025c). In the past few years, there has also been sig-nificant progress in benchmarks for financial rea-soning (Chen et al., 2021; Islam et al., 2023; Bigeard et al., 2025; Xie et al., 2024a; Liu et al., 2025a; Choi et al., 2025; Wang et al., 2025b; Li et al., 2025a; Liu et al., 2025b; Hu et al., 2025; Zhang et al., 2025; Xie et al., 2024b), office workspace automation (Wang et al., 2024, 2025a), and spreadsheet and tabular understanding and rea-soning (Wang et al., 2021; Cheng et al., 2022; Ma et al., 2024; Indika and Molybog, 2025; Li et al., 2023b; Dong et al., 2024; Wu et al., 2025; Li et al., 2025b; Dong et al., 2025; Li et al., 2024; Zhao et al., 2024), as well as multimodal document understanding (Mathew et al., 2021), driving ad-vances in LLM-based agents for enterprise tasks. In particular, GDPval (Patwardhan et al., 2025) evaluates economically valuable and professional tasks by comparing the quality of full work de-liverables. F INCH complements these efforts by emphasizing collaborative and long-horizon work-flows grounded in pre-existing enterprise artifacts (emails, versioned workbooks), where agents must coordinate and revise inherited materials rather than produce artifacts entirely from scratch. 
+
+5 Conclusion 
+
+We introduced F INCH , a new benchmark for real-world F&A enterprise workflows. F INCH derives workflows induced from enterprise email threads, version histories of spreadsheets, and high-quality financial artifacts with rigorous expert annotation, enabling systematic evaluation of agents on di-verse workflows that operate over large, messy, and multimodal enterprise artifacts and require long-horizon reasoning. Experiments show that even the strongest frontier systems pass fewer than 50% of workflows, revealing a gap between current AI capabilities and the demands of real enterprise prac-tice. We hope F INCH will benchmark agents on real, messy, and long-horizon F&A work. 
+
+6 Acknowledgments 
+
+We thank Jieqiong Li, Zikun Zhu, Chi Zhang for re-viewing the dataset and providing valuable advice. This work was supported by the Zhongguancun Academy (Grant Nos. C20250210 and XTS0044). 10776 7 Limitations 
+
+Access to contemporary enterprise data. A cen-tral challenge in building realistic workflow bench-marks is that true enterprise work records are ex-tremely difficult to obtain due to privacy, com-pliance, and contractual restrictions. FINCH is therefore anchored in publicly available real-world sources, most prominently the Enron corpus, which contains uniquely rich email threads and attached artifacts that reflect authentic collaborative work. However, Enron primarily reflects workplace prac-tices in the early 2000s, and enterprise tooling and collaboration patterns have evolved over the past two decades. Fortunately, the core productivity substrates for finance and accounting—email as the communication backbone and spreadsheets as the primary computational artifact—were relatively mature by that time and remain central in modern enterprise operations. To mitigate this limitation, we complement En-ron with a large collection of more recent, publicly available enterprise artifacts from financial institu-tions, global organizations, and government agen-cies, including the International Debt Report 2025, World Bank 2024 reports, Adidas 2024 financial statement, and Public Accounts of Canada 2024. FINCH also includes modern workflow patterns such as importing/processing data from contempo-rary finance software and web-search tasks requir-ing up-to-date information (up to 2025/04). These materials help F INCH better reflect modern finance and accounting work while respecting privacy and compliance constraints. 
+
+From measurement to closing the gap. Our benchmark surfaces both promising capabilities and substantial shortcomings of frontier AI sys-tems on realistic workflows. However, F INCH is designed primarily as an evaluation and diagnostic resource rather than as a proposal of new modeling or training techniques. How to develop method-ologically novel approaches that close the observed gaps—e.g., robust schema understanding under messy layouts, reliable formula-centric reasoning, and long-horizon execution with error recovery—is an important direction for future work. 
+
+8 Ethical considerations 
+
+The F INCH benchmark is constructed entirely from existing, publicly available data sources. Con-cretely, our workflows are derived from (1) the Enron email corpora, including the parsed Enron email dataset on Kaggle (released under the CC0 Public Domain dedication) and the Enron Email Dataset from EnronData.org (licensed under CC BY 3.0 US); (2) the EUSES spreadsheet corpus and its modified variants (CC BY 4.0); and (3) a diverse collection of enterprise-like artifacts, including doc-uments from investment and securities companies, the World Bank (CC BY 3.0), Canadian and British government websites (Open Government License), and public corpora such as WideSearch (MIT li-cense) and DABStep (CC BY 4.0). We respect the original licenses of all upstream resources and only redistribute content within the terms they allow. On top of these sources, we apply additional filtering, normalization, and expert annotation to organize spreadsheets and related documents into coherent workflows with task instructions, input files, and reference outputs. We do not introduce any new personally identifiable information. Dur-ing curation, we remove obviously sensitive fields when they are not necessary for the task (e.g., per-sonal contact information or signatures) and avoid annotating workflows whose successful comple-tion would depend on sensitive personal attributes. The resulting F INCH dataset is released under the Creative Commons Attribution 3.0 United States li-cense (CC BY 3.0 US), which permits broad reuse while requiring appropriate attribution. AI-assisted tools were used to summarize work-flows from emails and versioned spreadsheets, iden-tify labeling issues, and improve language clarity during manuscript preparation. All technical con-tent, experimental design, and conclusions were carefully determined by the authors. The language in F INCH is primarily English, re-flecting the dominant language of the underlying Enron and EUSES corpora and many of the public institutional sources. Because some artifacts origi-nate from funds and securities institutions and from Canadian government materials, a small fraction of workflows include Chinese or French content. We used AI to discover human annotation issues and polish the grammar of this paper. Potential risks include over-reliance on agentic systems evaluated on enterprise-like benchmarks, where automation without sufficient human-in-the-loop validation could miss unexpected errors in professional workflows. 10777 References 
+
+Anthropic. 2025a. Claude cowork. https://www.an thropic.com/product/claude-cowork .Anthropic. 2025b. Claude for excel. https://claude .com/claude-for-excel .Anthropic. 2025. Introducing claude sonnet 4.5. https: //www.anthropic.com/news/claude-sonnet-4 -5 . Accessed: 2025-12-14. World Bank. 2024. International Debt Report 2024 .World Bank, Washington, DC. World Bank’s annual publication on external debt statistics. Antoine Bigeard, Langston Nashold, Rayan Krishnan, and Shirley Wu. 2025. Finance agent benchmark: Benchmarking llms on real-world financial research tasks. arXiv preprint arXiv:2508.00828 .Yibin Chen, Yifu Yuan, Zeyu Zhang, Yan Zheng, Jinyi Liu, Fei Ni, Jianye Hao, Hangyu Mao, and Fuzheng Zhang. 2025. Sheetagent: towards a generalist agent for spreadsheet reasoning and manipulation via large language models. In Proceedings of the ACM on Web Conference 2025 , pages 158–177. Zhiyu Chen, Wenhu Chen, Charese Smiley, Sameena Shah, Iana Borova, Dylan Langdon, Reema Moussa, Matt Beane, Ting-Hao Huang, Bryan R Routledge, and 1 others. 2021. Finqa: A dataset of numerical reasoning over financial data. In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , pages 3697–3711. Zhoujun Cheng, Haoyu Dong, Zhiruo Wang, Ran Jia, Jiaqi Guo, Yan Gao, Shi Han, Jian-Guang Lou, and Dongmei Zhang. 2022. Hitab: A hierarchical table dataset for question answering and natural language generation. In Proceedings of the 60th Annual Meet-ing of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 1094–1110. Chanyeol Choi, Jihoon Kwon, Alejandro Lopez-Lira, Chaewoon Kim, Minjae Kim, Juneha Hwang, Jae-seon Ha, Hojun Choi, Suyeol Yun, Yongjin Kim, and 1 others. 2025. Finagentbench: A benchmark dataset for agentic retrieval in financial question answering. In Proceedings of the 6th ACM International Confer-ence on AI in Finance , pages 632–637. Department of Finance Canada. 2025. Fiscal refer-ence tables, november 2025. Technical report, Gov-ernment of Canada, Ottawa, Canada. Provides an-nual data on the financial position of the federal, provincial-territorial and local governments. Haoyu Dong, Yue Hu, and Yanan Cao. 2025. Reasoning and retrieval for complex semi-structured tables via reinforced relational data transformation. In Proceed-ings of the 48th International ACM SIGIR Confer-ence on Research and Development in Information Retrieval , pages 1382–1391. Haoyu Dong, Jianbo Zhao, Yuzhang Tian, Junyu Xiong, Shiyu Xia, Mengyu Zhou, Yun Lin, José Cambronero, Yeye He, Shi Han, and 1 others. 2024. Spread-sheetllm: encoding spreadsheets for large language models. arXiv preprint arXiv:2407.09025 .Alex Egg, Martin Iglesias Goyanes, Friso Kingma, An-dreu Mora, Leandro von Werra, and Thomas Wolf. 2025. Dabstep: Data agent benchmark for multi-step reasoning. arXiv preprint arXiv:2506.23719 .EnronData.org. Edo enron email pst dataset. https: //enrondata.readthedocs.io/en/latest/dat a/edo-enron-email-pst-dataset/ . Creative Commons Attribution 3.0 United States License. To provide attribution, please cite to “EnronData.org.”. Marc Fisher and Gregg Rothermel. 2005. The euses spreadsheet corpus: a shared resource for support-ing experimentation with spreadsheet dependability mechanisms. In Proceedings of the first workshop on End-user software engineering , pages 1–5. Google. 2024. Gemini for google workspace. https: //workspace.google.com/solutions/ai/ .Google DeepMind. 2025. Gemini 3 pro. https://de epmind.google/models/gemini/pro/ . Accessed: 2025-12-14. HM Treasury. 2023. Public expenditure statistical anal-yses 2023. Technical report, HM Treasury, London, United Kingdom. UK public expenditure statistical release (PESA). Liang Hu, Jianpeng Jiao, Jiashuo Liu, Yanle Ren, Zhou-futu Wen, Kaiyuan Zhang, Xuanliang Zhang, Xiang Gao, Tianci He, Fei Hu, and 1 others. 2025. Fin-searchcomp: Towards a realistic, expert-level evalua-tion of financial search and reasoning. arXiv preprint arXiv:2509.13160 .Amila Indika and Igor Molybog. 2025. Sod-bench: A large language model approach to doc-umenting spreadsheet operations. arXiv preprint arXiv:2510.19864 .Pranab Islam, Anand Kannappan, Douwe Kiela, Re-becca Qian, Nino Scherrer, and Bertie Vidgen. 2023. Financebench: A new benchmark for financial ques-tion answering. arXiv preprint arXiv:2311.11944 .Bryan Klimt and Yiming Yang. 2004. The enron corpus: A new dataset for email classification research. In 
+
+European conference on machine learning , pages 217–226. Springer. Haohang Li, Yupeng Cao, Yangyang Yu, Shashid-har Reddy Javaji, Zhiyang Deng, Yueru He, Yuechen Jiang, Zining Zhu, Kp Subbalakshmi, Jimin Huang, and 1 others. 2025a. Investorbench: A benchmark for financial decision-making tasks with llm-based agent. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 2509–2525. 10778 Hongxin Li, Jingran Su, Yuntao Chen, Qing Li, and Zhao-Xiang Zhang. 2023a. Sheetcopilot: Bringing software productivity to the next level through large language models. Advances in Neural Information Processing Systems , 36:4952–4984. Jinyang Li, Nan Huo, Yan Gao, Jiayi Shi, Yingxiu Zhao, Ge Qu, Yurong Wu, Chenhao Ma, Jian-Guang Lou, and Reynold Cheng. 2024. Tapilot-crossing: Bench-marking and evolving llms towards interactive data analysis agents. arXiv preprint arXiv:2403.05307 .Peng Li, Yeye He, Cong Yan, Yue Wang, and Surajit Chaudhuri. 2023b. Auto-tables: Synthesizing multi-step transformations to relationalize tables without using examples. Proceedings of the VLDB Endow-ment , 16(11):3391–3403. Zheng Li, Yang Du, Mao Zheng, and Mingyang Song. 2025b. Mimotable: A multi-scale spreadsheet bench-mark with meta operations for table reasoning. In 
+
+Proceedings of the 31st International Conference on Computational Linguistics , pages 2548–2560. Shu Liu, Shangqing Zhao, Chenghao Jia, Xinlin Zhuang, Zhaoguang Long, Jie Zhou, Aimin Zhou, Man Lan, and Yang Chong. 2025a. Findabench: Benchmarking financial data analysis ability of large language mod-els. In Proceedings of the 31st International Confer-ence on Computational Linguistics , pages 710–725. Zhaowei Liu, Xin Guo, Haotian Xia, Lingfeng Zeng, Fangqi Lou, Jinyi Niu, Mengping Li, Qi Qi, Jiahuan Li, Wei Zhang, and 1 others. 2025b. Visfineval: A scenario-driven chinese multimodal benchmark for holistic financial understanding. In Proceedings of the 2025 Conference on Empirical Methods in Natu-ral Language Processing , pages 24099–24157. Zeyao Ma, Bohan Zhang, Jing Zhang, Jifan Yu, Xi-aokang Zhang, Xiaohan Zhang, Sijia Luo, Xi Wang, and Jie Tang. 2024. Spreadsheetbench: Towards challenging real world spreadsheet manipulation. Ad-vances in Neural Information Processing Systems ,37:94871–94908. Minesh Mathew, Dimosthenis Karatzas, and CV Jawa-har. 2021. Docvqa: A dataset for vqa on document images. In Proceedings of the IEEE/CVF winter con-ference on applications of computer vision , pages 2200–2209. Microsoft. 2024. Microsoft 365 copilot. https://ww w.microsoft.com/en-us/microsoft-365/copil ot .OpenAI. 2025. Gpt-5. https://openai.com/index /introducing-gpt-5/ . Accessed: 2025-12-14. OpenAI. 2025. Introducing chatgpt agent. https: //openai.com/index/introducing-chatgpt-a gent/ .OpenClaw. 2025. Openclaw: Personal ai assistant. ht tps://github.com/openclaw/openclaw .Tejal Patwardhan, Rachel Dias, Elizabeth Proehl, Grace Kim, Michele Wang, Olivia Watkins, Simón Posada Fishman, Marwan Aljubeh, Phoebe Thacker, Lau-rance Fauconnet, and 1 others. 2025. Gdp-val: Evaluating ai model performance on real-world economically valuable tasks. arXiv preprint arXiv:2510.04374 .Jean-Paul Sartre. 1946. Existentialism Is a Humanism .Weixuan Wang, Dongge Han, Daniel Madrigal Diaz, Jin Xu, Victor Rühle, and Saravan Rajmohan. 2025a. Odysseybench: Evaluating llm agents on long-horizon complex office application workflows. arXiv preprint arXiv:2508.09124 .Yan Wang, Keyi Wang, Shanshan Yang, Jaisal Patel, Jeff Zhao, Fengran Mo, Xueqing Peng, Lingfei Qian, Jimin Huang, Guojun Xiong, and 1 others. 2025b. Finauditing: A financial taxonomy-structured multi-document benchmark for evaluating llms. arXiv preprint arXiv:2510.08886 .Zhiruo Wang, Haoyu Dong, Ran Jia, Jia Li, Zhiyi Fu, Shi Han, and Dongmei Zhang. 2021. Tuta: Tree-based transformers for generally structured table pre-training. In Proceedings of the 27th ACM SIGKDD Conference on Knowledge Discovery & Data Mining ,pages 1780–1790. Zilong Wang, Yuedong Cui, Li Zhong, Zimin Zhang, Da Yin, Bill Yuchen Lin, and Jingbo Shang. 2024. Officebench: Benchmarking language agents across multiple applications for office automation. arXiv preprint arXiv:2407.19056 .Ziwei Wang, Jiayuan Su, Mengyu Zhou, Huaxing Zeng, Mengni Jia, Xiao Lv, Haoyu Dong, Xiaojun Ma, Shi Han, and Dongmei Zhang. 2025c. Sheetbrain: A neuro-symbolic agent for accurate reasoning over complex and large spreadsheets. arXiv preprint arXiv:2510.19247 .Ryan Wong, Jiawei Wang, Junjie Zhao, Li Chen, Yan Gao, Long Zhang, Xuan Zhou, Zuo Wang, Kai Xiang, Ge Zhang, and 1 others. 2025. Widesearch: Bench-marking agentic broad info-seeking. arXiv preprint arXiv:2508.07999 .Pengzuo Wu, Yuhang Yang, Guangcheng Zhu, Chao Ye, Hong Gu, Xu Lu, Ruixuan Xiao, Bowen Bao, Yijing He, Liangyu Zha, and 1 others. 2025. Realhitbench: A comprehensive realistic hierarchical table bench-mark for evaluating llm-based table analysis. arXiv preprint arXiv:2506.13405 .xAI. 2025. Grok 4. https://x.ai/news/grok-4 .Qianqian Xie, Weiguang Han, Zhengyu Chen, Ruoyu Xiang, Xiao Zhang, Yueru He, Mengxi Xiao, Dong Li, Yongfu Dai, Duanyu Feng, and 1 others. 2024a. Finben: A holistic financial benchmark for large lan-guage models. Advances in Neural Information Pro-cessing Systems , 37:95716–95743. 10779 Qianqian Xie, Weiguang Han, Zhengyu Chen, Ruoyu Xiang, Xiao Zhang, Yueru He, Mengxi Xiao, Dong Li, Yongfu Dai, Duanyu Feng, and 1 others. 2024b. Finben: A holistic financial benchmark for large lan-guage models. Advances in Neural Information Pro-cessing Systems , 37:95716–95743. An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, Chujie Zheng, Day-iheng Liu, Fan Zhou, Fei Huang, Feng Hu, Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, and 41 others. 2025. Qwen3 technical report. Preprint ,arXiv:2505.09388. Zhihan Zhang, Yixin Cao, and Lizi Liao. 2025. Xfin-bench: Benchmarking llms in complex financial prob-lem solving and reasoning. In Findings of the Asso-ciation for Computational Linguistics: ACL 2025 ,pages 8715–8758. Wei Zhao, Zhitao Hou, Siyuan Wu, Yan Gao, Haoyu Dong, Yao Wan, Hongyu Zhang, Yulei Sui, and Haidong Zhang. 2024. Nl2formula: Generating spreadsheet formulas from natural language queries. In Findings of the Association for Computational Linguistics: EACL 2024 , pages 2377–2388. Ruiyan Zhu, Xi Cheng, Ke Liu, Brian Zhu, Daniel Jin, Neeraj Parihar, Zhoutian Xu, and Oliver Gao. 2025. Sheetmind: An end-to-end llm-powered multi-agent framework for spreadsheet automation. arXiv preprint arXiv:2506.12339 .10780 Multimodal Enterprise Workspace:   
+
+> Text, Tables, Formulas, Pivots,
+> Charts, Code, Images…
+> Data Entry/Import
+> Structuring/
+> Formatting Calculation Visualization
+> Reporting Financial Modeling Validation Search/Retrieval
+
+Figure 6: Real-world F&A work is messy, spanning heterogeneous and large-scale artifacts such as spreadsheets and PDFs. It’s also long-horizon and knowledge-intensive: workflows interleave multiple tasks and span diverse domains such as budgeting, trading, asset management, and operations.                     
+
+> Author Affiliation Email
+> Haoyu Dong *UCAS; Microsoft donghaoyu82@gmail.com
+> Pengkun Zhang South China University of Technology sezhangpengkun@mail.scut.edu.cn
+> Yan Gao Zhongguancun Institute of Artificial Intelligence gaoyan@zgci.ac.cn
+> Xuanyu Dong Harvest Fund qianmuxuanyu@126.com
+> Yilin Cheng Zhongguancun Academy; Fudan University ylcheng23@m.fudan.edu.cn
+> Mingzhe Lu UCAS lumingzhe23@mails.ucas.edu.cn
+> Zikun Zhu Duke University zz295@duke.edu
+> Adina Yakefu Hugging Face adina@huggingface.com
+> Shuxin Zheng Zhongguancun Academy; Zhongguancun Institute of Artificial Intelligence sz@bza.edu.cn
+> *Corresponding author. UCAS stands for the University of Chinese Academy of Sciences
+
+A Author List B Detailed Task and Business Type Distribution 
+
+Figure 3 summarizes the coverage of task and business types in F INCH . On the task side, the benchmark includes calculation tasks (119 work-flows) such as filling in formulas or computing figures; structuring and formatting tasks (86) in-volving table reorganization, layout adjustment, and row/column insertion or deletion; data en-try and import tasks (44) that transcribe or ingest data from spreadsheets, PDFs, images, or exter-nal sources; validation and review tasks (37) that check consistency and reconcile calculations within or across sheets and files; cross-sheet or cross-file retrieval tasks (36) that aggregate values from mul-tiple sources into a target workbook; summary and visualization tasks (33) that produce financial sum-maries or charts; financial modeling tasks (15) that extend or calibrate valuation and timing models; web search tasks (11) that collect and integrate financial data from online sources; and a small number of translation tasks (3) that translate spread-sheets or reports while preserving structure, format-ting, and layout. On the business side, workflows span reporting (48 workflows), trading and risk management (35), predictive modeling (33), operational management (36), planning and budgeting (26), pricing and valu-ation (15), accounts payable and receivable (10), as well as procurement and sales (7) and asset manage-ment (3). Some workflows are tagged with multiple business types, reflecting the cross-functional na-ture of real-world enterprise finance and accounting work. 
+
+C Quality Control 
+
+20% of our annotators are full-time reviewers who do not create any original annotations, and 80% act 10781 as full-time workflow creators (producing the ini-tial annotations) and also serve as part-time review-ers. Each workflow is proposed by one person and typically reviewed by two others, including a ded-icated full-time reviewer who reviews all queries and also inspects LLM-generated review comments to surface potential annotation issues. Importantly, Quality Control (QC) is iterative rather than one-pass: approximately 40% of workflows undergo at least one round of revision; 20+ workflows went through three or more QC rounds, and we held reg-ular group discussions to resolve challenging cases and align standards. We also maintain version-controlled documents and review notes that record key parts of this process. 
+
+D Experiment Details 
+
+D.1 API-based Models Execution Paradigm. We frame the API evalu-ation as a code generation task . Models are in-structed to solve spreadsheet manipulation and gen-eration workflows by generating executable Python scripts, which are then executed in a sandboxed environment to produce output artifacts. This paradigm aligns with SpreadsheetBench’s philoso-phy of treating model-written code as the primary action space, but is adapted here to accommodate long-horizon, multimodal enterprise tasks. • Action Space : Models generate Python code using standard libraries including openpyxl 
+
+(for Excel manipulation), pandas (for data pro-cessing), matplotlib (for visualization), and 
+
+scikit-learn (for statistical analysis). • Output Format : Models must produce com-plete, self-contained Python scripts wrapped in markdown code blocks ( “‘python ... “‘ ). • Sandboxed Execution : Generated code is ex-tracted via regex parsing and executed in isolated Docker containers running Jupyter Kernel Gate-way. Each container mounts the dataset volume at /mnt/data/ with a 10-minute session timeout. • Single-shot Protocol : We employ a strict one-shot generation protocol without iterative refinement—each model produces exactly one solution per workflow. If the generated code fails to execute (e.g., due to syntax errors or runtime exceptions), the workflow is marked as failed without retry. This strict setting is designed to evaluate the model’s raw code generation capa-bility under realistic deployment constraints. This unified code-as-action setting ensures that the measured performance reflects the model’s in-herent competence on complex workflows rather than benefits derived from interactive debugging. 
+
+Prompting Strategy. We employ a zero-shot set-ting with a structured system prompt comprising: 1. A role definition: “You are an expert who can manipulate spreadsheets through Python code.” 2. A detailed description of the compact spread-sheet encoding format with illustrative exam-ples. 3. The task instruction and explicit input/output file paths. 4. Library-specific best practices (e.g., openpyxl 
+
+chart creation patterns) to mitigate common code errors. 5. An explicit directive to generate Python code as the final output. This structured design explicitly guides models toward generating valid, context-aligned Python code, minimizing ambiguity in task interpretation. However, for models that support reasoning traces (GPT 5.1, Gemini 3 Pro), we request explicit rea-soning via the include_reasoning API param-eter, enabling us to capture the model’s internal deliberation process for subsequent qualitative er-ror analysis. Temperature is set to 0.7 across all models. 
+
+Model License All models evaluated in this work are accessed through their official APIs or prod-uct interfaces and are subject to the corresponding providers’ terms of service and licensing agree-ments. We do not redistribute any model weights, training data, or proprietary outputs. GPT 5.1 is provided by OpenAI and used in ac-cordance with OpenAI’s API and product usage policies. Claude Sonnet 4.5 is provided by An-thropic and accessed via its official API under An-thropic’s commercial license. Grok 4 is provided by xAI and evaluated through its public API under xAI’s terms of service. Qwen 3 Max is provided by Alibaba Cloud and accessed subject to Alibaba’s licensing terms. Gemini 3 Pro Preview is provided by Google and evaluated via Google’s official API under the applicable Google AI service terms. All evaluations are conducted for research pur-poses. We do not claim ownership over any model outputs, and the results reported in this paper reflect 10782 Model Provider Context Max Output Vision Native PDF                           
+
+> GPT 5.1 (OpenAI, 2025) OpenAI 400K 128K ✓✓
+> Claude Sonnet 4.5 (Anthropic, 2025) Anthropic 1M †64K ✓✓
+> Grok 4 (xAI, 2025) xAI 256K 256K ✓—Qwen 3 Max (Yang et al., 2025) Alibaba 256K 32.8K ——Gemini 3 Pro Preview (Google DeepMind, 2025) Google 1.05M 65.5K ✓✓
+> Table 7: API-based model configurations. Context and output limits are measured in tokens. Vision indicates native image input support, while Native PDF refers to direct PDF file ingestion via the provider’s API without explicit text extraction. †Available via long-context beta API mode.
+
+observed model behavior under controlled experi-mental settings rather than any guarantees of model performance. Any use of the evaluated models be-yond this study must comply with the respective providers’ licenses and usage policies. 
+
+Multimodal Input Handling. We extend the framework to support multimodal inputs involving images and PDFs. For vision-capable models (GPT 5.1, Claude Sonnet 4.5, Grok 4, and Gemini 3 Pro), we use each provider’s official multimodal API to transmit visual inputs alongside text prompts. For PDF documents, we adopt a tiered strategy. Mod-els with native PDF support—GPT 5.1, Claude Sonnet 4.5, and Gemini 3 Pro Preview—directly ingest PDF files via their file upload interfaces, enabling analysis of both textual and visual ele-ments without pre-extraction. For Grok 4, which lacks native PDF support, we extract text using PyMuPDF and include it in the pdf_content field. For Qwen 3 Max, which lacks multimodal support entirely, both image and PDF content are converted to textual descriptions. While this fallback retains semantic cues, it loses layout and visual context. 
+
+Context Management. To handle large spread-sheets that may exceed model context limits, we implement automatic truncation. We reserve 32K tokens for model output—sufficient for comprehen-sive code generation and analysis while remaining within the output limits of all evaluated models. Truncation is triggered when input exceeds the re-maining capacity, removing content from the end of the spreadsheet data with an explicit notice ap-pended to inform the model of data loss. 
+
+E Detailed Analysis 
+
+E.1 Agent Behavior Analysis Product-side agents. ChatGPT 5.1 Pro tends to decompose workflows into more, smaller steps, with explicit reasoning, tool calls, execution, and self-checking at each step. This leads to longer traces and noticeably higher latency, but also more opportunities for intermediate validation (e.g., sanity-checking partial results). However, the code it generates is often hidden behind tool abstractions, so our error attribution is limited to observed behav-ior and natural language reasoning rather than the exact implementation details. Claude Sonnet 4.5 typically uses fewer steps and produces more direct solutions. In visualization-heavy workflows, its generated charts are often both more accurate and more aesthetically polished than those produced by ChatGPT 5.1 Pro, leading to relatively fewer failures in the data visualization sub-tasks. ChatGPT 5.1 Pro and Claude Sonnet 4.5 agents can explore Excel files through many API calls within a single workflow, but their encoding meth-ods are not well-suited to spreadsheets with com-plex layouts and structures. Thanks to efficient encoding and appropriate tool use, the following single-call API-based method achieves a pass rate that is much closer to that of product-side agents. 
+
+API-based models Our API-based runs are single-call: they leverage the models’ underlying reasoning capabilities but lack two crucial affor-dances that web agents exploit. (i) interleaved code execution with feedback, and (ii) explicit reflection based on intermediate tool outputs. As a result, the API agents must generate the entire plan, code, and outputs within a single LLM call. When their initial structural assumptions about a spreadsheet are slightly off, they have no mechanism to detect or correct the mistake, leading to a significantly higher error rate, particularly in categories related to schema understanding and table manipulation. It’s desirable for future work to explore agentic methods with multiple rounds of API calls. 
+
+E.2 Detailed Error Factors in Enterprise F&A Workflows 
+
+First, F INCH workflows routinely involve large, fragmented spreadsheet ecosystems : dozens of in-10783 terlinked workbooks and thousands of rows dis-tributed across many sheets. Executing these work-flows accurately requires long-range cross-sheet navigation and precise referencing, which substan-tially increases the likelihood of small retrieval er-rors. Second, the content is dense and semantically homogeneous : many cells contain domain-specific financial concepts that are subtly different yet lex-ically similar (e.g., variants of revenue/expense items, adjusted vs. unadjusted metrics), making en-tity disambiguation and cell grounding unusually difficult. Third, the table layouts and structures are complex and often irregular , including multi-level headers, merged cells, nested subtotals, and bespoke layouts that force the model to infer struc-ture from noisy contents and ad hoc formatting. For example, at the code level, even tiny misinter-pretations of these layouts (e.g., off-by-one errors when specifying ranges) can then propagate into globally incorrect outputs, especially when logic is applied in batch across many such sheets. Fourth, 
+
+formulas encode latent structure and logic . In the FINCH dataset, each sheet contains a large number of formulas that encode latent business logic, tem-poral assumptions, and fine-grained dependencies that are not visible from displayed values alone; yet models typically prioritize cell values and under-use formulas, leading to systematic misinterpreta-tions. For example, in a pricing sheet with the col-umn header IF NGPL MidContinent index (@ Baker) , the apparent semantics from the header alone suggest a daily exposure metric. However, inspecting the associated formula ( 25 * V21 +C41 * C22 ) reveals that the column in fact encodes a 55-day payment timing. Models that ignore or under-utilize formulas systematically misinterpret such columns’ roles in downstream calculations, and this misinterpretation then propagates through subsequent steps. Finally, many workflows involve 
+
+multimodal artifacts and chat-centric tasks such as combining spreadsheets with PDFs, charts, and screenshots, requiring the agent to jointly reason over heterogeneous formats. For example, tables embedded in PDFs are often only partially refer-enced, with key entries missing or truncated. 
+
+F Tool-Call Overhead Case Study 
+
+To better understand the practical complexity of completing F INCH tasks, we conduct a small-scale case study on tool-call overhead. From the full set of 172 workflows, we select 20 representative examples covering different task types and vary-ing levels of complexity, and analyze how many tool calls are required for an LLM-based agent to complete them. 
+
+F.1 Methodology 
+
+For each selected task, we use the up-to-date (March 2026) Claude Coworker (Opus 4.6) in an isolated session and ask it to solve the task accord-ing to the provided instruction. The agent is also required to write its tool-use trajectory into a log file, recording each tool call step by step. Since the number of tool calls in a failed attempt may differ from that in a successful completion, we use a sec-ond session to compare the produced output against the reference answer file and determine whether the result is correct. When the output is incorrect, we observe two distinct cases from the perspective of tool usage. In the first case, the overall tool-use procedure is already complete, but the execution within one or more steps is wrong; for example, the agent invokes a Python script as needed, but the script contains an incorrect formula. In the second case, the trajectory is missing one or more critical steps that are nec-essary for producing the correct output. This sec-ond case is relatively uncommon, appearing only twice among the 20 examples we analyze. For such cases, we ask the model to identify the missing in-dispensable steps and merge them into the original trajectory. Therefore, our final count is intended to approximate the tool calls required to correctly complete the task, rather than merely reporting the raw tool calls from a failed run. 
+
+F.2 Results and Analysis 
+
+Table 8 summarizes the 20 selected tasks and their corresponding numbers of tool calls. 
+
+Web-grounded tasks incur substantially higher tool-call overhead. Among the 20 cases, the two tasks involving web search (ID 19 and ID 88) re-quire dramatically more tool calls than the oth-ers. In Task 19, websearch and webfetch together account for 60 out of 107 tool calls (56%). In Task 88, these two tools account for 34 out of 71 tool calls (48%). During inspection, we find that web-grounded tasks often require repeated retrieval from multiple external sources, followed by cross-source comparison, integration, and verification. As a result, the dominant cost in such tasks comes not from spreadsheet manipulation itself, but from 10784 Workflow ID Task Type(s) #Tasks #Tool Calls 46 Calculation 1 731 Summary / Visualization 1 826 Summary / Visualization 1 10 47 Calculation 1 13 17 Cross-sheet/file Retrieval 1 14 137 Structuring / Formatting 1 16 91 Calculation, Financial Modeling 2 6106 Structuring / Formatting, Calculation 2 649 Validation / Review, Calculation 2 14 16 Calculation, Summary / Visualization 2 17 28 Validation / Review, Structuring / Formatting 2 17 158 Validation / Review, Calculation 2 18 15 Structuring, Translation, Summary / Vis. 3 9150 Calculation, Data Entry, Cross-sheet Retrieval 3 966 Calculation, Structuring, Financial Modeling 3 17 139 Financial Modeling, Calculation, Summary / Vis. 3 25 159 Structuring, Calc., Fin. Modeling, Validation 4 14 81 Data Entry, Structuring, Validation, Calc. 4 17 19 Web Search, Data Entry, Structuring, Calc. 4 107 88 Web Search, Data Entry, Structuring, Calc., Vis. 5 71 
+
+Table 8: Case study of tool-call overhead on 20 representative tasks. 
+
+external information acquisition and validation. 
+
+Distribution of tool calls for non-web tasks. Af-ter excluding the two web-search tasks, the number of tool calls ranges from 6 to 25, with a mean of 13.2 and a median of 14. The first and third quartiles are 9 and 17, respectively, giving an in-terquartile range of 8. 
+
+Task-type count alone does not explain tool-call overhead. After removing the two web-search outliers, we do not observe a clear positive relation-ship between the number of task-type labels and the number of tool calls. For example, both Task 46 and Task 47 are labeled as Calculation , but Task 47 requires nearly twice as many tool calls due to addi-tional business-logic reasoning (sign conventions, Purchase vs. Pooling Method tax-base logic, and cross-checking of business consistency). 
+
+Limitations. This analysis should be viewed as a case study rather than a full-scale statistical eval-uation. The 20 tasks are selected as representative examples rather than a random sample, and the measured tool-call counts depend on the behavior of a specific agent configuration (Claude Coworker, Opus 4.6). In addition, our corrected trajectories for failed runs involve a post hoc reconstruction of missing indispensable steps, which introduces some degree of judgment into the counting process. 
+
+F.3 Representative Tool-Call Logs 
+
+We present two representative examples. Task 26 represents the general case, while Task 139 illus-trates the case where the original trajectory omits critical steps required for correct completion. 
+
+F.3.1 Task 26 Task description. Add two charts to each of the three worksheets— Scenario1 , Scenario2 , and 
+
+Scenario3 :1. A Hedge Coverage stacked column chart (first year only; X-axis = months; stacked series = contract MW values; Short = reference line; Y-axis = MW) 2. A Portfolio Cost line chart (all years; X-axis = months; series = Portfolio Weighted Avg and Monthly Price, with an optional fixed-price line; Y-axis = $/MWh) 
+
+Tool-call log. 
+
+1. Bash — List files in the working directory ( ls mnt/26/ )
+
+Purpose: Confirm that the source file exists. 2. Read — Read metadata.json 
+
+Purpose: Understand the task instructions, source file, and output requirements. 3. Read — Read SKILL.md 
+
+Purpose: Review best practices for Excel file operations. 4. Bash — Run a Python script to inspect the Excel file structure 
+
+Purpose: Use openpyxl to read 10785 26_src_0.xlsx and print all sheet names plus the first 20 rows of data, in order to understand the layout, column mapping, and row structure of each Scenario worksheet. 5. Bash — Read the full output file 
+
+Purpose: Retrieve the complete structure infor-mation because the previous step’s output was truncated. 6. Bash — Run a Python script to inspect the first 20 rows of each Scenario sheet in detail 
+
+Purpose: Use get_column_letter to parse column names and values, confirm the mean-ing of each column, and verify data ranges and types. 7. Bash — Run a Python script to inspect all date rows in column Z of Scenario1 (rows 4–63) 
+
+Purpose: Confirm the date range (January 2001 to December 2005), determine the first-year row range (4–15), and identify the full multi-year range (4–63). 8. Bash — Copy the source file to the output file (cp mnt/26/26_src_0.xlsx mnt/26/26.xlsx )
+
+Purpose: Preserve the original file and operate on a copy. 9. Bash — Create and run the Python script 
+
+add_charts.py 
+
+Purpose: Use openpyxl to add two charts to each of the three Scenario sheets, creating all six charts in total. 10. Bash — Run a Python script to verify that the charts were added successfully 
+
+Purpose: Check the number of charts, titles, chart types, and number of series in each sheet to confirm that all six charts were correctly em-bedded. 
+
+F.3.2 Task 139 Note. This is a corrected tool-call log. Based on the original trajectory, several missing but es-sential steps were added (marked as [Added] ). These mainly involve constructing monthly cash-flow data for XNPV Variables , building multi-year analysis data for Cedar Brakes , and performing precise calculations using native Excel formulas. 
+
+Tool-call log. 
+
+1. Bash — ls mnt/139/ 
+
+Description: List the files in the workspace folder and confirm that the source file exists. 2. Read — metadata.json 
+
+Description: Read the metadata file to under-stand the task instructions, source file list, and output requirements. 3. Read — xlsx SKILL.md 
+
+Description: Read the Excel skill file to under-stand best practices and workflow procedures. 4. Bash — Python script to inspect the source Ex-cel workbook structure ( data_only=True )
+
+Description: Use openpyxl in data_only 
+
+mode to open the source workbook and inspect all worksheet names, dimensions, and data val-ues. 5. Bash — Python script to fully read the data in the Damage Calculations sheet 
+
+Description: Read all rows in the Damage Calculations worksheet in detail to under-stand the annual capacity payment amounts for Q1–Q4, the hard-coded XNPV values, and the sensitivity-table region. 6. Bash — Python script to fully read the Summary 
+
+sheet 
+
+Description: Read all regions of the Summary 
+
+worksheet to understand the layout of each Q1– Q4 section and the structure of the Delta region. 7. Bash — Python script to read formu-las in the Damage Calculations sheet (data_only=False )
+
+Description: Open the workbook in formula mode and retrieve all cell formulas in the 
+
+Damage Calculations sheet to understand the calculation logic and the data-table formula ob-jects. 8. Read — Read the full text output from Tool Call 7 
+
+Description: Read the complete output to obtain all formula details. 9. Bash — Python script to read formulas in the 
+
+Summary sheet 
+
+Description: Read the formulas in the Summary 
+
+worksheet in formula mode to understand the formula reference relationships. 10. Bash — Python script to read formulas and vari-ables in the Tenaska’s i Adjustment sheet 10786 Description: Understand the calculation for-mulas and key variables used in the Tenaska interest-rate adjustment. 11. Bash — Python script to read variable values in the Tenaska’s i Adjustment sheet 
+
+Description: Retrieve the variable values used in the calculations. 12. Bash — Python script to read formulas and vari-ables in the Brazos’ i Adjustment sheet 
+
+Description: Understand how the Brazos interest-rate adjustment differs from the Tenaska adjustment. 13. Bash — Python script to validate the XNPV calculation method 
+
+Description: Use known data to verify the XNPV calculation method and determine the correct date convention and discounting method. 14. Bash — Python script to inspect 
+
+DataTableFormula parameters 
+
+Description: Inspect the data-table formula parameters in the Damage Calculations 
+
+sheet and confirm that the table uses F8 (plant capacity) as the input variable. 15. [Added] Bash — Python script to read the full data and formulas in the Cedar Brakes sheet 
+
+Description: Read all row and column data as well as the formula structure in the Cedar Brakes worksheet to understand: • the layout of annual data rows (Year ,
+
+Volume , Old PPA , Market , SI , New PPA ,
+
+Savings ); • the calculation relationships among columns (e.g., SI = Old PPA total - Market total ); • the range of years covered by the data (2000– 2016+); • which rows and columns need to be filled under different capacity assumptions. 16. [Added] Bash — Python script to analyze an-nual capacity payment amounts under different capacities 
+
+Description: Based on the rate structure ($/kW-mo) in the Damage Calculations sheet, com-pute the annual capacity payment amounts for Q1–Q4 under four capacity assumptions: 240 / 245 / 258 / 263 MW: • Q1 (Status Quo): compute annual pay-ments using the original rates; • Q2 (Modified i): use rates adjusted by Tenaska’s i adjustment; • Q3 (Modified i + Brazos): use rates ad-justed by both Tenaska and Brazos; • Q4 (No i): remove the interest-rate adjust-ment and recompute the rates. 17. [Added] Bash — Python script to construct monthly cash-flow data 
+
+Description: Convert annual capacity payment amounts into monthly cash-flow sequences in preparation for XNPV calculation: • generate a date sequence (from January 1997 to the contract end year, using month-end dates); • generate the corresponding monthly cash flows for Q1–Q4 under each scenario (= an-nual payment / 12); • verify that the sum of monthly cash flows equals the annual total. 18. TodoWrite — Create a task list 
+
+Description: Create and track task progress. 19. Bash — Main Python script for calculation and file modification 
+
+Description: Execute the main calculation and file-modification script: • copy the source file to the output file 
+
+139.xlsx .
+
+[Added section — fill in XNPV Variables ]
+
+• Write the title "XNPV Variables:" starting from row 88 of the Damage Calculations 
+
+sheet; • write the column headers: Date , Question 1, Question 2 , Question 3 , Question 4 ;• write the date sequence and monthly cash-flow data for Q1–Q4 month by month; • for the 263 MW baseline capacity, directly use the annual rates already present in the 
+
+Damage Calculations sheet; • for 240 / 245 / 258 MW capacities, scale the capacity payments proportionally. 
+
+[Added section — fill in multi-year Cedar Brakes data] 
+
+• Fill in the complete financial data for each year in the data region of the Cedar Brakes 
+
+sheet (rows 24+); 10787 • include Volume , Old PPA ($/MWh and to-tal), Market ($/MWh and total), SI , New PPA ($/MWh and total), and Savings ;• cover all years from 2000 through the con-tract end year. 
+
+[Added section — use Excel XNPV formulas] 
+
+• Write XNPV formulas into the sensitivity-table region of the Damage Calculations 
+
+sheet, referencing the monthly cash flows and dates in XNPV Variables ;• formula format: =XNPV(discount_rate, cash_flow_range, date_range) ;• ensure the formulas can be recalculated cor-rectly in Excel. 
+
+[Original section] 
+
+• Fill in the values for each capacity in the Q1–Q4 sections of the Summary sheet; • fill in the Delta section of the Summary sheet (differences for each capacity relative to the 263 MW baseline); • save the file. 20. TodoWrite — Update task progress 21. Glob — Search for the path of recalc.py 
+
+22. Bash — python recalc.py 
+
+Description: Run the recalc.py script to re-calculate all formulas and ensure that formulas such as XNPV are properly evaluated. 23. [Added] Bash — Python script to verify the integrity of XNPV Variables data 
+
+Description: Open the output file in data_only 
+
+mode and verify: • the integrity of the XNPV Variables sec-tion (row count, date continuity, cash-flow values); • the correctness of the Cedar Brakes data (whether the values in each yearly column are reasonable); • whether the XNPV formula results are con-sistent with expectations. 24. Bash — Python script to verify values in the 
+
+Summary sheet and the DC sensitivity table 
+
+Description: Verify the correctness of all popu-lated values, including: • PV5 , debt, SWAP , and implied equity value for each capacity in Summary Q1–Q4; • differences for each capacity relative to the 263 MW baseline in the Summary Delta section; • all XNPV values in the DC sensitivity table. 25. TodoWrite — Final update of task progress 
+
+G Examples 
+
+This section presents representative examples from FINCH to illustrate the diversity and complexity of spreadsheet-centric enterprise workflows covered by the benchmark. The examples span a wide range of realistic professional tasks, including cross-sheet verification, formula auditing, document-grounded extraction, schema transformation, financial mod-eling, and reporting. Note that the figures shown in this section are illustrative excerpts rather than complete workflow inputs or full task specifications. Many F INCH 
+
+workflows involve large, multi-sheet or multi-file inputs and extensive supporting documents, which cannot be fully visualized in static screenshots. Ac-cordingly, the figures are intended to highlight rep-resentative data characteristics, structural complex-ity, and reasoning challenges that arise in the un-derlying workflows, rather than to fully specify the tasks themselves. Across these workflows, AI agents are required to jointly reason over heterogeneous artifacts, while preserving structural consistency and semantic cor-rectness. Many tasks demand multi-step reason-ing, precise interpretation of formulas, and careful cross-referencing across sheets or external docu-ments. Collectively, these examples highlight the core challenges targeted by F INCH : messy and mul-timodal document processing, long-horizon reason-ing, robust code generation under schema variation, and faithful execution of complex financial and accounting logic. 10788 Sheet: Regulatory  
+
+> Sheet: Portland Trading & Origination Sheet: Canda
+
+Sheet: Portland Fundies & Structuring Sheet: Market Risk & Research 
+
+> Sheet: Gas Trading Sheet: Legal
+
+Example Sheets 
+
+Validate 
+
+Cross-sheet retrieval Figure 7: For this task, the model must verify the department headcount summary by cross-checking each of the 
+
+39 departments against its detailed roster sheet. It should correct discrepancies such as miscounts and missing or duplicate entries. The summary must be updated by fixing incorrect totals, removing departments that no longer exist, and adding any omitted departments. Furthermore, the underlying schema varies slightly across departments, which challenges reliable code generation. 10789 Figure 8: An example of extracting data from tables and charts in PDFs and saving it to a spreadsheet. AI agents must understand the layout, parse hierarchical structures, interpret how values map to specific cells, and reconstruct formulas from aggregated values. 
+
+Figure 9: Cross-sheet reference validation. This example is relatively easy for frontier AI agents. 10790 Figure 10: This task requires deriving the XNPV5 of the contract under different combinations of assumptions. The analysis uses contract capacity rates, plant capacity, and the specified discount rate provided in the table. While key adjustment components—namely the Interest Rate Adjustment, Apache Savings, and O&M Adjustment—must be retrieved from supporting documents and applied according to each scenario (included, excluded). For each assumption set, the analyst must then construct the annual capacity payment cash flows by deriving the adjusted capacity rate, converting it into monthly and annual capacity payments, and assembling the full month-by-month cash-flow schedule. Only after these intermediate steps are completed can the cash flows be discounted to the valuation date (e.g., December 31, 2000) to compute XNPV5. 
+
+Figure 11: The sum of A&B and the equity roll-forward test requires cross-sheet retrieval and calculation. 10791 Translate Figure 12: A workflow that translates a French report into English while preserving its format and structure. The report contains many tables to translate, along with text, notes, and even charts. Transform 
+
+Figure 13: Transforming a table from one structure to another requires reorganizing data and retrieving information across sheets (e.g., area_info and summary ). This example poses additional challenges: (1) distinguishing value-driven operators from volume-driven operators, and (2) performing aggregation and validation over the reorganized data. 10792 Figure 14: The apparent semantics from the headers suggest a monthly/daily exposure metric. However, inspect-ing the underlying formula (e.g., C5=$A4*Volumes!B6*Curves!G7+25*Volumes!B7*Curves!G8 ) reveals that it actually encodes a 55-day payment timing schedule. Models that ignore or underutilize formula information, therefore systematically misattribute the column’s role in downstream computations, and this misinterpretation then propagates through subsequent steps. 
+
+Figure 15: This workflow requires creating a new spreadsheet with all values converted to USD. It also requires correct in-sheet and cross-sheet formula references while preserving the original spreadsheet layout. 10793 Figure 16: Generating reports from tabular data requires financial knowledge of data analysis, financial events, and visualization. For example, one may plot two series with different units on a single chart (e.g., using a secondary y-axis) to reveal their correlation. 
+
+Figure 17: This Excel sheet shows an assumption-update workflow, where a mix of forward contracts is used to cover monthly peak-load short positions. It lists the contract allocations and MW volumes, along with monthly peak loads and the resulting short MW. A table on the right computes blended prices and portfolio costs, and the stacked chart visualizes coverage by contract type over the year. 10794

@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/aaai-2026-accepted/aaai-2026-40328/fig-001.webp",
+      "caption": "",
+      "page": 2,
+      "index": 1,
+      "width": 1154,
+      "height": 1239
+    }
+  ]
+}

@@ -1,0 +1,1061 @@
+Title: 2026.acl-long.265.pdf
+
+URL Source: https://aclanthology.org/2026.acl-long.265.pdf
+
+Published Time: Thu, 11 Jun 2026 01:09:33 GMT
+
+Number of Pages: 27
+
+Markdown Content:
+> Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 5868–5894 July 2-7, 2026 ©2026 Association for Computational Linguistics
+
+## FinSight: Towards Real-World Financial Deep Research 
+
+Jiajie Jin 1* , Yuyao Zhang 1* , Yimeng Xu 1, Yutao Zhu 1, Hongjin Qian 2, Zhicheng Dou 1†
+
+> 1
+
+Gaoling School of Artificial Intelligence, Renmin University of China 
+
+> 2
+
+BAAI 
+
+{jinjiajie, dou}@ruc.edu.cn  
+
+> §https://github.com/RUC-NLPIR/FinSight
+
+Abstract 
+
+Professional financial reports are the corner-stone of investment decision-making, demand-ing deep analytical reasoning and multimodal synthesis. While recent deep research systems excel in open-domain search tasks, they strug-gle with financial reporting, specifically in pro-cessing structured financial data, ensuring an-alytical depth, and integrating professional vi-sualizations. To address this gap, we intro-duce FinSight (Fin ancial In Sight ), the first multi-agent framework for end-to-end automa-tion of professional multimodal financial re-ports. At its core, we propose a Code Agent with Variable Memory architecture, unifying financial data, domain tools, and agent modules into a programmable variable space to enable flexible data manipulation and reasoning via executable code. To guarantee report quality, 
+
+FinSight adopts a Two-Stage Writing Frame-work with Generative Retrieval. It first distills raw data into structured Chain-of-Analysis seg-ments, then synthesizes them into a coherent, citation-aware, and multimodal narrative com-plying with financial reporting norms. Addi-tionally, an Iterative Vision-Enhanced Mech-anism uses visual feedback to refine code-generated charts to expert standards. Exper-iments on company and industry-level tasks demonstrate that FinSight significantly out-performs state-of-the-art deep research systems in factual accuracy, analytical depth, and pre-sentation quality, validating the effectiveness of our framework. Our code is available at https: //github.com/RUC-NLPIR/FinSight .
+
+1 Introduction 
+
+High quality financial research reports, character-ized by deep analytical narratives interleaved with rich visualizations, are the cornerstone of invest-ment decisions worth billions of dollars (Tian et al., 2025). These multimodal documents go beyond    
+
+> ∗Equal Contribution, †Corresponding author
+
+simple summaries by synthesizing raw market data into strategic insights for asset managers and in-stitutional investors. However, producing such re-ports remains a challenging task due to the over-whelming volume of financial data and the demand for rapid, high-quality analysis (Ren et al., 2021; Jimeno-Yepes et al., 2024; Jin et al., 2025a). Recent advances in artificial intelligence, particularly in deep research applications (OpenAI, 2025a; Gem-ini, 2025; Grok, 2025; Camara, 2025), present great potential in automating these labor-intensive tasks. Despite these technical advances, significant chal-lenges persist in automating the generation of full financial research reports that meet the high stan-dards for data accuracy, analytical depth, and multi-modal content integration (Yang et al., 2025; Dong et al., 2025a). However, significant challenges persist in adapt-ing these general methods for professional financial reporting. Most existing systems are designed for open-domain search, often lacking the capability to integrate real time, heterogeneous financial data (Hu et al., 2025; Li et al., 2025c, 2026). Fur-thermore, they typically produce plain text out-puts that miss critical multimodal visualizations, such as dynamic charts and tables (Yang et al., 2025). Finally, the reliance on rigid, single-pass workflows limits their ability to dynamically adjust research strategies, resulting in insufficient analyti-cal depth (Trivedi et al., 2023; Li et al., 2025a; Jin et al., 2025b, 2026). To address these challenges, we introduce 
+
+FinSight , a multi-agent system designed for pro-fessional, multimodal financial reporting. At the core of FinSight is the Code Agent with Vari-able Memory (CAVM) , which unifies heteroge-neous data and tools into a programmable vari-able space, orchestrating three specialized agents for Data Collection, Analysis, and Report Gen-eration. Built upon CAVM, we orchestrate three specialized agents responsible for Data Collection, 
+
+5868 Data Collection 
+
+estion: Company Research Report on POP MART (09992)         
+
+> Agent Thinking: I can first get the stock price table through the API...
+> Agent Thinking: The stock info function may provide basic informaiton. Agent Thinking: ... obtain the number of employees over past 3 years.
+> Name: Stock Price of 09992
+> Description: Contains the company's stock...
+> Source: https://quote.eastmoney .com/hk/09992.html
+> Name: Company Info of 09992
+> Description: Contains the company's basic...
+> Source: https://stockpage.10jqka .com.cn/HK9992/company/
+> Name: Number of Employees...
+> Description: Contains the employees over 3 years...
+> Source: https://xueqiu.com/....
+
+Data 
+
+Save as Data 
+
+> Stock Prices Balance Sheet Income Statement Shareholder Structure Trend Toy Market Size Number of Employees
+
+Collected Data Chain-of-Analysis 
+
+Two-Stage Writing 
+
+Data Analysis Tasks Stage 1: Chain-of-Analysis Generation Stage 2: Structured Writing 
+
+> Retrieved CoAs Financial Condition Analysis Supply Chain Cost Analysis
+
++ Dra 
+
+Final Report (doc/pd )
+
+Uni fi ed Variable Space Tool  
+
+> Web Search Browse Web Page PDF Reader Financial API Macroeconomic API National Statistics API
+
+Agent Data Analysis Agent Report Generation Agent 
+
+> Multi-Source Data Collection Agent
+> Financial APIs
+> Economy APIs Deep Search Agent
+> Agent as a tool Deep Search Agent
+> Web Search Browse Web Page PDF Reader
+> Variable Memory
+
+Financial Condition Financing Process  …
+
+Supply Chain Cost  …
+
+Prede fi ned Tasks from User Brainstormed Tasks from Agent  
+
+> Data Analysis Agent Deep Search Agent Stock Prices Balance Sheet Income Statement
+
+Analyze in parallel Stock information Trend of Toy Market Product of POP MART Prede fi ned Tasks from User Brainstormed Tasks from Agent  
+
+> Self-Critic Optimization
+
+Final Report (markdown)  
+
+> # Overall Trend Analysis @import Pop Mart Stacked Bar Chart of Management Expense Proportions, with the Horizontal Axis as Years (2020-2024) and the Vertical Axis as Expense Amounts (Millions of Yuan) (management_expense_breakdown_by_category)
+> Chain-of-Analysis
+
+Save as Data  
+
+> plt.legend() LLM Plot VLM Critic Data Accuracy Label Clarity Visual ality
+> Feedback
+
+Data Collection Tasks 
+
+> Post Process
+
+Agentic Work fl ow Orchestration         
+
+> info_data = call_agent("DeepSearch", goal=''Obtain the number of employees in the company over the past three years") print(info_data); save_result (info_data , name=''employees list of 09992",...)
+> <execute> </execute>
+> stock_info_list = call_tool("Get_Stock_Info", stock_code = "09992") print(stock_price_data); save_result (stock_info_list )
+> <execute> </execute>
+> stock_price_data = call_tool("Get_Stock_Price", stock_code = "09992") print(stock_price_data); save_result (stock_price_data )
+> <execute> </execute> <execute>
+> df = load_data("stock_price") df['5-Day MA'] = df['Close'].rolling(window=5)
+> </execute>
+> ..# code for drawing
+> plt.sca er( …)
+> Report Generation Agent Invoke search agent CoA Segments Collected data
+> Outline
+> ## Section 1: …
+> ### Overview […]### …Analysis […]## Section 2: …
+
+Generate Outline 
+
+> Data Collection Agents
+
+Figure 1: Overview of the FinSight Framework. 
+
+Data Analysis, and Report Generation. To guar-antee professional quality, FinSight incorporates a Two-Stage Writing Framework with Genera-tive Retrieval , which first distills findings into a structured Chain-of-Analysis (CoA) backbone be-fore generating the full narrative with seamlessly interleaved citations and figures. Furthermore, an 
+
+Iterative Vision-Enhanced Mechanism leverages VLM feedback to refine code-generated charts, en-suring they meet professional aesthetic standards. We further construct a comprehensive bench-mark covering company and industry-level tasks across multiple markets. We establish a rigor-ous evaluation protocol centered on Factual Ac-curacy, Analytical Depth, and Presentation Qual-ity, employing both human and LLM-as-a-Judge assessments. Empirical results demonstrate that 
+
+FinSight achieves state-of-the-art performance, surpassing existing methods in report accuracy, ci-tation reliability, and visual integration. Our core contributions are as follows: 1. To the best of our knowledge, we present the first exploration of the Multimodal Deep Research Task within the financial domain. We propose a system capable of generating professional-grade reports that combine deep textual analysis with rich visual elements, with empirical results demonstrating state-of-the-art performance on this task. 2. We propose the Code Agent with Variable Memory (CAVM) architecture, which unifies data, tools, and agents into a programmable variable space, enabling the flexible orchestra-tion of complex, data-intensive report genera-tion tasks. 3. We introduce two novel mechanisms to en-sure high-quality output: an Iterative Vision-Enhanced Mechanism that refines code gen-erated charts via visual feedback, and a Two-Stage Writing Framework that progresses from concise analytical chains to comprehen-sive, evidence-based narratives. 
+
+2 Method 
+
+2.1 Problem Formulation 
+
+We formalize the task of Professional Financial Report Generation a hierarchical and multimodal generation task. Given a research query q, the system aims to generate a structured report R. We model R as a hierarchical ordered sequence: 
+
+R = {S1, S 2, . . . , S N },
+
+where N is the number of sections derived from a dynamic outline O. Each section Si is further defined as an ordered sequence of multimodal el-ements Si = ( ei, 1, e i, 2, . . . , e i,m ), where each el-ement ei,j ∈ { T, V, C } represents text segments, visualization figures, or citations, respectively. 
+
+2.2 The Framework of FinSight 
+
+FinSight is a multi-agent framework designed to emulate the rigorous workflow of professional fi-5869 nancial analysts. As illustrated in Figure 1, the sys-tem operates through a hierarchical, autonomous process. Given a research target, FinSight first initiates a broad Data Collection phase to aggre-gate a comprehensive repository of structured and unstructured market intelligence. Subsequently, the framework executes a Two-Stage Writing pro-cess: it first distills raw data into a set of multi-dimensional insights and visualizations (termed the Chain-of-Analysis ), and then synthesizes these segments into a coherent, professional-grade final report. Crucially, this workflow is not a rigid linear pipeline. Agents possess the autonomy to recur-sively invoke one another to resolve information gaps dynamically, effectively transitioning the sys-tem from handling raw, heterogeneous data to pro-ducing a structured multimodal report. To support this complex interaction, our frame-work is built upon the Code Agent with Vari-able Memory (CAVM) architecture (detailed in Sec 2.3). This architecture unifies heterogeneous resources(e.g. data, tools, agents) into a pro-grammable variable space, enabling agents to ma-nipulate them as executable objects through code. Within this unified space, we orchestrate three spe-cialized agent classes, as shown in Figure 1: (1) 
+
+Data Collection Agents serve as the interface to the external world, transforming web knowledge and database inputs into executable Python objects (e.g., DataFrames) within the variable memory; (2) the Data Analysis Agent acts as the core reason-ing engine, transforming raw data into analytical insights to produce multimodal Chain-of-Analysis (CoA) segments; and (3) the Report Generation Agent synthesizes these insights into the final re-port, ensuring overall narrative coherence and struc-tural consistency. 
+
+2.3 Code Agent with Variable Memory Motivation: From Reading Context to Manip-ulating Variables Traditional agents typically rely on unstructured text or vector embeddings as memory. While sufficient for general tasks, this paradigm struggles in professional financial scenarios, which require precise calculations and handling of massive heterogeneous data. To ad-dress this, we propose Code Agent with Variable Memory (CAVM) , a novel architecture that re-defines agent memory as a Programmable State Representation . The core philosophy is to shift the agent’s interaction mode from reading context 
+
+to manipulating variables . This design empow-Code Agent with Variable Memory                             
+
+> Unified Variable Space
+> Data
+> Tool
+> Agent
+> Balance Sheet: pd.DataFrame
+> Competing Companies: JSON
+> Company News: JSON
+> Financial Analysis: TEXT
+> BalanceSheet( stock_code )
+> StockPrice( stock_code )
+> Search( query )
+> Click( url ,intent )
+> AKShare
+> Deep Search Agent
+> Data Collection Agent
+> Task: Competitive Landscape Analysis
+> ...
+> ...
+> Report Generation Agent
+> ...
+> Hmm, let's analyze SenseTime's competitive landscape. ...
+> First I will identify SenseTime's competitors using the existing data. ...
+> Let me compare their stock prices. ...
+> I want to know more about 4Paradigm's recent events to compare their development. ...
+> <execute>
+> competing_companies = call_data ("Competing_Companies" )
+> print (competing_companies )
+> </execute>
+> [{"name" :"4Paradigm" ,"code" :"06682" ,"market" :"HK" },
+> {"name" :"CloudWalk" ,"code" :"688327" ,"market" :"A" },
+> {"name" :"iFlytek" ,"code" :"002230" ,"market" :"A" }]
+> <execute>
+> stock_price_data = call_tool ("Get_Stock_Price" , stock_code =
+> "06682" , market = "HK" )
+> </execute>
+> <execute>
+> recent_events_data = call_agent ("Deep_Search_Agent" , query =
+> "4Paradigm's Recent Events" )
+> </execute>
+
+Figure 2: The design philosophy of CAVM. 
+
+ers agents to maintain data as executable objects (e.g., DataFrames) rather than static text, enabling rigorous mathematical operations and significantly reducing hallucinations in numerical reasoning. 
+
+Unified Variable Space We abstract the multi-agent collaboration environment into a unified vari-able space V, encompassing three distinct types as shown in Figure 2: (1) Data ( Vdata ): Stores both structured (e.g., ‘pandas.DataFrame‘ for fi-nancial tables) and unstructured data as executable Python objects; (2) Tools ( Vtool ): Functional inter-faces for external interaction; (3) Agents ( Vagent ): 
+
+encapsulated agent instances that can be invoked recursively. 
+
+V = Vdata ∪ V tool ∪ V agent .
+
+This unified scope allows heterogeneous elements to be accessed via a standard code interface. For in-stance, an agent can perform statistical analysis on 
+
+Vdata or invoke another expert agent from Vagent 
+
+within the same code block, supporting hierarchi-cal reasoning that static context windows cannot achieve. 
+
+Foundation Agent with Code Action Built upon this variable space, the agent operates in an itera-tive loop of reasoning and code execution. Unlike purely generative agents, our agent actively decides which variables to retrieve or modify via code, en-suring contextual conciseness . Formally, at step 
+
+t, the agent generates a reasoning trace Rt and a code action Ct:
+
+Pθ(Rt, Ct | q, Vt−1, Ht−1)= Pθ(Rt | Φ( Vt−1), ·)
+
+︸ ︷︷ ︸
+
+Reasoning 
+
+· Pθ(Ct | R t, Φ( Vt−1), ·)
+
+︸ ︷︷ ︸
+
+Code Action 
+
+,5870 Table 1: Comparison of agent roles in terms of their tool sets (including agent-as-a-tool) and data access. 
+
+Agent Tool & Agent Set Data 
+
+Deep Search Search, Browse, PDF Reader –Data Collec-tion Fin. APIs, Econ. APIs, Deep Search Agent –Data Analysis Deep Search Agent Collected Data Report Gen. Deep Search Agent Data, Analysis 
+
+Algorithm 1 CAVM Agent Execution Loop 
+
+Require: Task input q, Variable space V0, Max iterations T
+
+Ensure: Final result and updated variable space 1: H0 ← PreparePrompt (q, Φ( V0)) 
+
+2: for t = 1 to T do 
+
+3: Rt, Ct ← LLM (Ht−1) // Reason & generate code 
+
+4: if Ct is FINAL_ANSWER then 
+
+5: return Rt, Vt−1
+
+6: end if 
+
+7: Vt, out t ← Execute (Ct, Vt−1) // Run code 
+
+8: Ht ← H t−1 ⊕ (Rt, Ct, out t)
+
+9: end for 
+
+10: return HT , VT
+
+where Φ is a formatting function that summarizes the metadata of variables in Vt−1. The code Ct is then executed by a Python interpreter to update the variable space: 
+
+Vt, output t = Execute (Ct, Vt−1), (1) 
+
+Ht = Ht−1 ⊕ output t. (2) This mechanism allows the agent to maintain a "working memory" of precise data states through-out long-horizon tasks. 
+
+CAVM Agent Loop Algorithm 1 presents the simplified execution loop of each CAVM-based agent. All agents share this unified loop; the key difference lies in their assigned tool sets, callable sub-agents, and available data, as summarized in Table 1. 
+
+2.4 Two-Stage Writing with Generative Retrieval Motivation A complete report encompasses anal-yses from multiple perspectives, which can be regarded as an integration of several Chains-of-Analysis. To generate long-form financial research reports with both textual depth and multimodal coherence, we design a two-stage writing frame-work augmented with generative retrieval. It de-composes the report writing process into (1) Chain-of-Analysis Generation and (2) Structured Writing with Generative Retrieval. Two-Stage  Writing            
+
+> Section Analytical Task Insight
+> Chain-of-Analysis Generation
+> Section 1: Fundamental Analysis of SenseTime's Growth
+> Section 2: AI Industry's Opportunities and Market Dynamics
+> Founding Team Analysis
+> Equity Structure Analysis
+> Their expertise lies in effective large-scale operations. ...
+> ...
+> ...
+> Relevant CoA Segments
+> Structured Writing
+> ... ahighly concentrated equity structure. @import ... Bar Chart
+> Section 1 Section 2 Section 3
+> # Founding Team Analysis
+> Chain-of-Analysis (CoA) Segment
+
+Figure 3: Chain-of-Analysis Illustration. 
+
+Stage 1: Chain-of-Analysis Generation Given the research question q, the Data Analysis Agent first generates a set of analytical perspectives P =
+
+{p1, p 2, ..., p K }. The agent then performs parallel data analysis for each pi, producing corresponding Chain-of-Analysis (CoA) that capture insights from distinct viewpoints. Each CoA is generated based on the interaction history Hi, accumulated during the data analysis process. To ensure coherence between textual con-tent and referenced elements (e.g. figure, refer-ence), this process is augmented with a generative retrieval mechanism that jointly produces textual contents along with element identifiers. Specifically, for citations , the agent inserts natural language placeholders (e.g., [Source: SenseTime Income Statement] ) directly into the text stream during generation, leveraging its memory of previously browsed data. These de-scriptions are then matched against data meta-data via BM25 retrieval, with a similarity thresh-old to filter out unreliable matches. For fig-ures , the agent generates import tokens (e.g., 
+
+@import “revenue_trend_chart” ), describing the required visual content. Since charts are created during the Vision-Enhanced stage, we pre-generate captions via a VLM and use embedding retrieval to match the agent’s description with the most rel-evant chart. This unified natural language inter-face enables the model to plan the report structure and its multimodal references within a single, un-interrupted autoregressive generation, ensuring a smooth narrative flow. The process can be formal-5871 ized as: 
+
+P (A | q, V) = P (P | q, V) ·
+
+> |P|
+
+∏
+
+> i=1
+
+P (ai | pi, V).
+
+Stage 2: Structured Writing Building on CoAs, a Report Generation Agent first constructs a report outline O = {o1, o 2, ..., o n}, and then writes each section sequentially. For each section si, the agent dynamically retrieves the most relevant data and CoA segments from the unified variable memory 
+
+V, formalized as: 
+
+P (R | A , V, q ) = P (O | A , q )·
+
+> n
+
+∏
+
+> i=1
+
+P (A(i) 
+
+> sel
+
+, V(i) 
+
+> sel
+
+| A , V, ·) · P (si | s<i , A (i) 
+
+> sel
+
+, ·).
+
+To prevent hallucination of non-existent references and figures, agent is instructed to follow the iden-tifiers established in A. To ensure reference accu-racy, the agent strictly follows the identifiers estab-lished during the stage 1. 
+
+2.5 Iterative Vision-Enhanced Mechanism for Visualization Motivation Generating high-quality visualizations is a persistent challenge in automated report gen-eration, particularly in data-intensive domains like finance that require nuanced analysis and presen-tation. Existing methods often rely on single-pass code execution or employ Vision-Language Mod-els (VLMs) without incorporating visual feedback, which frequently leads to suboptimal outcomes. Drawing inspiration from Chain-of-Thought (Wei et al., 2022) and Actor-Critic (Schulman et al., 2017), we propose a framework where an agent learns to progressively improve visualizations. This is achieved by iteratively plotting a chart and re-fining it based on critical feedback, ensuring both stable generation and continuous quality enhance-ment. 
+
+Iterative Vision-Enhanced Mechanism Specif-ically, the final output of the Data Analysis Agent includes the target chart specifications along with the corresponding descriptions and data. As shown in Figure 4, the agent generates an initial visual-ization through executable plotting code, which is then evaluated by a VLM to give potential issues of visual cues (e.g., missing labels, inappropriate color schemes). These feedbacks are sent to the system, directing the iterative code generation until the output reaches professional quality. 
+
+P (Cvis | V ) = 
+
+> M
+
+∏
+
+> t=1
+
+Pθ(Cvis t | C vis t−1, Ft−1, V),
+
+Ft−1 = VLM (Execute (Cvis t−1)) ,
+
+where M is the maximum number of iterations. The iteration continues until convergence or a pre-defined quality threshold is satisfied. 
+
+3 Experiments 
+
+3.1 Benchmark Construction 
+
+Financial research report generation remains an under-explored problem lacking appropriate evalu-ation benchmarks and metrics. To address this gap, we construct a comprehensive benchmark specifi-cally designed for multimodal financial report gen-eration. This benchmark consists of a curated dataset of research targets, human written reports as ground truth, and a rigorous multidimensional evaluation protocol. 
+
+Dataset Composition. To simulate real-world investment research scenarios, our dataset encom-passes research targets at both company and in-dustry levels. For company-level analysis, we cu-rated a diverse list of companies covering different markets, industry sectors, and market capitaliza-tions. For industry-level analysis, we selected high-attention industries as research targets. To establish a rigorous ground truth, we collected in-depth anal-ysis reports authored by professional brokerage in-stitutions to serve as Golden References. To ensure a high quality bar, we applied stringent filtering criteria, selecting only reports exceeding 20 pages in length and containing more than 20 charts and visualizations. In total, we collected 20 samples: 10 company-level and 10 industry-level targets. 
+
+Evaluation Metrics. We design 9 automated evaluation metrics across three critical dimensions, each ranging from 0 to 10 points. Detailed descrip-tion of each metric can be found in Appendix F. 
+
+(1) Factual Accuracy: Measures the reliability and correctness of generated content through Core Conclusion Consistency (alignment with reference conclusions), Textual Faithfulness (proper citation support), and Text-Image Coherence (consistency between textual and visual elements). 
+
+(2) Information Effectiveness: Evaluates the analytical value delivered to investors via Informa-tion Richness (distinct information points), Cover-5872 Iteration 1 Iteration 2 Iteration 3        
+
+> Low information density, can be supplemented with auxiliary information such as average lines. There is no legend to explain the meaning of different colors, and two subgraphs is a bit redundant .The entire chart is qualified as a chart for a professional research report . No need to modify.
+
+Figure 4: An example of our Iterative Vision-Enhanced Mechanism of Visualization. The chart is generated by matplotlib and seaborn package in Python. 
+
+age (proportion of key reference information cap-tured), and Analytical Insight (critical analysis and forward-looking recommendations). 
+
+(3) Presentation Quality: Assesses profes-sional standards through Structural Logic (orga-nizational coherence), Language Professionalism (adherence to financial terminology), and Chart Ex-pressiveness (effective visualization utilization and aesthetic quality). Details of selected targets and evaluation metrics can be found in Appendix F. 
+
+3.2 Baselines 
+
+We compare FinSight against two categories of baselines: (1) LLMs with Search Tools: Lead-ing large language models directly combined with search tools for report generation, includ-ing OpenAI GPT-5 (OpenAI, 2025b), DeepSeek-R1 (DeepSeek-AI et al., 2025), and Claude-4.1-Sonnet (anthropic, 2025); (2) Deep Research Agents: State-of-the-art commercial deep re-search products, including Gemini-2.5-Pro Deep Research (Gemini, 2025), Grok Deep Search (Grok, 2025), OpenAI Deep Research (OpenAI, 2025a), and Perplexity Deep Research 1. Details of baseline implementations are shown in Appendix D. 
+
+3.3 Implementation Details 
+
+Our framework utilizes DeepSeek-V3 and DeepSeek-R1 as backbone models. For search, we employ the Google Search API to fetch the top-10 results. To ensure robust evaluation, we use Gemini-2.5-Pro as the primary judge model, with GPT-5 serving as an auxiliary evaluator to mitigate single-model bias. In main experiments, we report mean scores with 95% confidence intervals across 
+
+> 1https://www.perplexity.ai
+
+three independent runs to verify statistical signif-icance. To complement our automated metrics, we conducted a rigorous human evaluation with 6 experts, using the same evaluation metrics. Each annotator reviewed a random subset of 10 research targets, referencing professional brokerage reports as the golden standard. We report the inter-rater reliability using Krippendorff’s α and human-LLM judgement correlation using Pearson’s r. For additional details, please refer to Appendix C.5. 
+
+3.4 Main Results 
+
+Table 2 compares the performance of FinSight 
+
+against all baselines. Overall, FinSight achieves the highest average score (7.93) , significantly out-performing closed-source commercial agents in-cluding Gemini DR (5.73) and OpenAI DR (6.44). This validates the effectiveness of our multi-agent framework in generating professional-grade re-ports. Regarding Factuality , FinSight secures top scores in citation faithfulness and text-image con-sistency , demonstrating the efficacy of the iden-tifier mechanism within our Chain-of-Analysis. Notably, while our consistency score (6.84) is marginally lower than OpenAI DR (6.87), case studies suggest this stems from our preference for 
+
+comprehensive data acquisition over simplified conclusions , which occasionally introduces com-plex, data-driven variances. Crucially, FinSight demonstrates a clear advan-tage in Analytical Quality , securing the highest scores across richness, coverage, and insightful-ness. This superiority also extends to Presentation Quality , where our system maintains a comprehen-sive lead in logic, language, and particularly visu-alization . Notably, the visualization score (8.57) 5873 Table 2: Overall evaluation results on financial report generation benchmark (averaged over three runs). Bold denotes the highest score in each column, Underlined denotes the second highest. Full results are shown in Appendix C.1. 
+
+Model Factual Analytical Presentation Avg. Cons. Faith. T-I. Rich. Cover. Ins. Logic Lang. Vis. 
+
+LLM with Search Tools 
+
+GPT-5 w/ Search 5.95 6.35 4.77 5.43 4.52 5.09 6.53 5.87 3.90 5.38 Claude-4.1-Sonnet w/ Search 5.78 5.92 3.55 5.58 5.25 5.01 6.34 6.07 2.59 5.12 DeepSeek-R1 w/ Search 6.26 5.92 4.08 6.68 6.33 6.62 7.03 6.79 3.35 5.90 
+
+Deep Research Agent 
+
+Grok Deep Search 4.71 5.72 4.21 4.90 4.03 4.35 5.87 5.61 3.76 4.79 Perplexity Deep Research 5.02 5.74 4.03 3.88 3.40 3.65 5.47 4.92 3.42 4.39 Gemini-2.5-Pro Deep Research 5.92 6.66 4.32 6.19 6.03 5.74 6.77 6.70 3.23 5.73 OpenAI Deep Research 6.87 6.78 4.58 6.79 6.83 7.33 7.56 7.58 3.66 6.44 
+
+FinSight (ours) 6.84 7.59 7.84 8.49 8.44 7.78 7.82 7.98 8.57 7.93 Factual Analytical Presentation Total 02468  
+
+> Score
+> 6.68 7.17 7.48 7.11
+
+(a) Human Evaluation Score 
+
+OpenAI DR Gemini DR FinSight 4 5 6 7 8
+
+Score (GPT-5 Judge) 
+
+45678
+
+> Score (Gemini Judge)
+> FinSight (ours)
+> Gemini DR DeepSeek-R1 w/ Search GPT-5 w/ Search OpenAI DR Perplexity DR Claude w/ Search Grok DR
+
+(b) Cross-Judger Consistency 
+
+Baselines FinSight (ours) 
+
+Figure 5: Results across different evaluators. (a) Comparison of human scores (0-10 scale). (b) Evaluation results using GPT-5 and Gemini-2.5-Pro as judges. 
+
+far surpasses all baselines, underscoring the sys-tem’s advanced multimodal capabilities in generat-ing professional-grade charts. 
+
+3.5 Ablation Studies 
+
+We conduct ablation studies (Table 3) to evaluate the contribution of our key components. Key find-ings are as follows: (1) Removing iterative VLM feedback causes a significant decline in Presenta-tion (8.12 → 6.63) and Analytical Quality (8.23 
+
+→ 7.23). This confirms that high-quality visuals are prerequisite for the model to generate insight-ful, chart-based analysis. (2) Merging analysis and writing into a single process leads to a sharp drop in Analytical Quality (8.23 → 5.83) and Factual Accuracy (7.42 → 6.20), validating the superior-ity of our analyze-then-write strategy over single-pass generation. (3) Eliminating dynamic search degrades performance across all dimensions (e.g., Factual Accuracy 7.42 → 5.97), highlighting the necessity of acquiring supplementary knowledge during the analysis and drafting phases. 
+
+4 Analysis 
+
+4.1 Human Evaluation 
+
+We recruited six financial experts to benchmark 
+
+FinSight against two leading commercial base-lines, using Golden Reports and strict rubrics for objectivity (details in Appendix G.2). As shown in Figure 5(a), FinSight achieves the highest total score ( 7.11 ), significantly outperforming Gemini DR (6.11) and OpenAI DR (5.50). While Gemini DR retains a slight edge in Factual accuracy (6.86 vs. 6.68), which is likely due to proprietary data ac-cess, FinSight dominates in Analytical Depth and 5874 Table 3: Ablation studies of our key design. 
+
+Method Fact. Ana. Pres. 
+
+FinSight 7.42 8.23 8.12 w/o Two-Stage Writing 6.20 5.83 6.20 w/o Iterative Feedback. 7.10 7.23 6.63 w/o Dynamic Search. 5.97 5.80 7.03 
+
+Presentation Quality . Notably, FinSight scores 
+
+7.48 in presentation (baselines < 5.0), demonstrat-ing the decisive value of our multimodal chart gen-eration. 
+
+4.2 Cross-Model Verification 
+
+To mitigate potential self-preference bias in our primary judge ( Gemini DR ), we employed GPT-5 
+
+as an independent evaluator using identical proto-cols. Figure 5(b) confirms that FinSight consis-tently ranks first regardless of the evaluator. We observe high ranking consistency between judges (Kendall’s τ = 0 .764 , p = 0 .008 ). Even under GPT-5 evaluation, Gemini DR remains second, con-firming that FinSight ’s lead stems from objective improvements in analytical and visual depth rather than evaluator-specific bias. 
+
+4.3 Reliability and Factuality Analysis Key Fact Accuracy. Directly measuring the fac-tuality of long-form reports is challenging. We introduced a Golden Facts Evaluation by extract-ing 13 core financial indicators (e.g., Gross Mar-gin, ROE) from professional reports as Ground Truth. We manually verified the accuracy of these data points. As shown in Figure 6(a), FinSight 
+
+achieves an accuracy of 54.6% , surpassing Gemini DR (38.5%) and OpenAI DR (30.0%) by a large margin. This demonstrates our method’s superi-ority in uncovering deep, quantitative details that general-purpose agents often miss. 
+
+Citation Quality Analysis. We further evaluated the quality of the references cited in our report. (1) 
+
+Citation Faithfulness: We manually verified the top-50 citations per report to check if the source explicitly supported the text. FinSight achieves a superior accuracy of 72.9% (342/469 verified), outperforming Gemini DR’s 69.8% . This high faithfulness is attributed to our generative retrieval mechanism, which identifies references during the drafting process rather than via post-hoc appending. (2) Source Authority: We classified citations into             
+
+> Table 4: Statistics of our generation process at both the CoA level and the final report level.
+> Chain of Analysis Level
+> # Tokens 2,761 # Images 5.3
+> Final Report Level
+> # Fin. API Calls 18.3 # Tokens 62,586 # Search Queries 983.2 # Images 51.2 # Browse Pages 469.8 # CoA Segments 17.6
+
+High, Medium, and Low authority based on human-written rules. Figure 6(b) reveals that FinSight 
+
+utilizes High Authority sources at a rate (36.5%) comparable to Gemini DR. While our reliance on open web search results in a slightly higher por-tion of Low Authority sources, the high faithful-ness score ensures that the information extracted remains valid. 
+
+4.4 Generation Process Statistics 
+
+Table 4 provides a detailed summary of the genera-tion process. At the Chain-of-Analysis level, each CoA is a self-contained multimodal block, averag-ing 2,761 tokens and 5.3 images. At the final report level, a typical report synthesizes approximately 17.6 CoA segments, resulting in 62,586 tokens and 51.2 images. The data collection phase involves an average of 983.2 search queries and 469.8 browsed web pages, demonstrating the depth of information gathering enabled by our framework. 
+
+5 Related Work 
+
+Deep Research Systems Deep research systems have evolved from simple retrieval to agentic knowledge synthesis, utilizing ReAct loops(Yao et al., 2022) or multi-agent collaboration to auto-mate information gathering (OpenAI, 2025a; Li et al., 2025c; Hu et al., 2025; Tang et al., 2025; Li et al., 2025b). However, existing frameworks ex-hibit significant limitations in multimodal process-ing (Yang et al., 2025) and domain-specific applica-tions (Jimeno-Yepes et al., 2024; Tian et al., 2025; Jin et al., 2024b). Due to the text-centric design of report generation workflows and the base models’ lack of native image generation capabilities (Ren et al., 2021; Chen et al., 2024; Dong et al., 2025c), current systems produce reports deficient in visual elements such as charts and diagrams. Furthermore, these systems demonstrate inadequate adaptation to financial domains, particularly in their inability to support for professional-grade chart generation, limited real-time market data integration, creating 5875 OpenAI DR Gemini DR FinSight (Ours) 020 40 60       
+
+> Key Information Accuracy (%)  (a) Key Financial Fact Accuracy
+> 30.0% 38.5% 54.6%
+> OpenAI DR Gemini DR FinSight (Ours) 0% 20% 40% 60% 80% 100%
+> Percentage (b) Citation Authority Distribution
+> 35.0% 50.7% 14.3% 36.7% 35.8% 27.4% 36.5% 34.8% 28.7%
+> High Medium Low Figure 6: Factuality Evaluation. (a) Key Financial Fact Recall : The percentage of ground truth facts from golden reports covered by each model. (b) Citation Authority : The distribution of citations classified by source reliability.
+
+substantial gaps between system outputs and pro-fessional requirements. 
+
+LLM Agents in Financial Domain Existing fi-nancial agents largely focus on specific predictive tasks (Zhang et al., 2025; Xiao et al., 2025; Dong et al., 2025b) or employ simplified, single-pass workflows for report generation (Wu et al., 2025; Yang et al., 2024; Dong et al., 2025d). These approaches often suffer from superficial analysis, lacking the iterative reasoning required for deep in-sight (Dong et al., 2024). While some platforms of-fer data tools (Zhang et al., 2025; Jin et al., 2024a), they fail to provide a unified framework that com-bines deep analytical reasoning with multimodal integration . Consequently, current systems cannot meet the high standards of professional financial research in terms of data breadth, analytical depth, and presentation quality. Crucially, these systems differ from FinSight in two key aspects. First, regarding comprehensive-ness and depth : existing methods integrate limited, fixed data sources and lack the “deep search” ca-pability required to mine diverse data, resulting in short, rigid analytical texts ( ∼300 tokens) fo-cused on a few fixed dimensions, far below pro-fessional financial research standards. Second, re-garding multimodal capabilities : current methods often lack visual outputs entirely or are restricted to a few predefined, low-quality charts. In con-trast, FinSight targets the seamless generation of high-quality, interleaved text and professional vi-sualizations through our Iterative Vision-Enhanced Mechanism. 
+
+6 Conclusion 
+
+In this paper, we present FinSight , a multi-agent framework designed for multimodal deep research. This framework is capable of generating com-prehensive, long-form financial reports with in-terleaved text and images. By integrating the Code Agent with Variable Memory and an Iterative Vision-Enhanced Mechanism, FinSight achieves dynamic analysis and professional visualization. Empirical evaluations demonstrate that our system significantly outperforms state-of-the-art commer-cial agents in factual accuracy and analytical depth, successfully bridging the gap between raw mar-ket data and actionable investment insights. While benchmarked on financial tasks, our code-centric approach provides a promising paradigm for fu-ture general-purpose automated research. However, deploying such systems in the real world necessi-tates vigilance regarding potential risks. Without proper constraints, such a system could be mis-used to mass-produce deceptive reports for market manipulation. Furthermore, over-reliance on auto-mated research without rigorous human oversight could amplify systemic biases. Future research must advance agent capabilities in tandem with stricter auditing mechanisms and safety guardrails to ensure the responsible application of AI in fi-nance. A thorough discussion of potential risks is provided in Appendix B. 
+
+Limitations 
+
+While FinSight achieves promising results, we identify four limitations hindering immediate real-world adoption. (1) Efficiency: Our multi-agent 5876 framework relies on large-scale LLMs for tasks like data analysis and plotting, resulting in high com-putational costs. Generating a single report con-sumes approximately 5 million tokens and takes about 20 minutes, which may limit its applica-tion in high-velocity environments. Future works could replace these with specialized, smaller mod-els to improve inference efficiency. (2) Factuality: 
+
+Despite using generative retrieval to produce text-image interleaved content, long-form generation is still prone to hallucinations, a common hurdle in deep research. Implementing a strict verifica-tion mechanism to ensure claim traceability is a necessary next step. Furthermore, the system cur-rently processes a significant amount of noise and information from low-authority sources. Future iterations may require “tool middleware” to ver-ify and denoise source data before processing. (3) 
+
+Generalizability: Currently tailored for financial reports, the system lacks a flexible interface for other domains. Future work will explore human-in-the-loop designs to allow users to customize work-flows for diverse report types. (4) Data Latency: 
+
+FinSight ’s workflow relies on data snapshots cap-tured during the initial analysis phase. Because generating long-form reports is time-intensive, the system currently lacks a mechanism to dynami-cally capture and integrate high-frequency market shifts mid-writing. This may lead to slight data latency in extremely volatile market conditions. Consequently, FinSight is currently best suited for quarterly or weekly corporate research rather than real-time day trading. 
+
+Acknowledgements 
+
+This work was supported by National Natural Sci-ence Foundation of China No. 62272467. The work was partially done at the Beijing Key Labora-tory of Research on Large Models and Intelligent Governance. 
+
+References 
+
+anthropic. 2025. Meet claude. https://www. anthropic.com/claude .Nicholas Camara. 2025. open-deep-research. 
+
+https://github.com/nickscamara/ open-deep-research .Yuemin Chen, Feifan Wu, Jingwei Wang, Hao Qian, Ziqi Liu, Zhiqiang Zhang, Jun Zhou, and Meng Wang. 2024. Knowledge-augmented financial market analy-sis and report generation. In Proceedings of the 2024 Conference on Empirical Methods in Natural Lan-guage Processing: Industry Track , pages 1207–1217, Miami, Florida, US. Association for Computational Linguistics. DeepSeek-AI, Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu, Shirong Ma, Peiyi Wang, Xiao Bi, Xiaokang Zhang, Xingkai Yu, Yu Wu, Z. F. Wu, Zhibin Gou, Zhihong Shao, Zhuoshu Li, Ziyi Gao, Aixin Liu, Bing Xue, Bingxuan Wang, Bochao Wu, Bei Feng, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chenyu Zhang, Chong Ruan, Damai Dai, Deli Chen, Dongjie Ji, Erhang Li, Fangyun Lin, Fucong Dai, Fuli Luo, Guangbo Hao, Guanting Chen, Guowei Li, H. Zhang, Han Bao, Hanwei Xu, Haocheng Wang, Honghui Ding, Huajian Xin, Huazuo Gao, Hui Qu, Hui Li, Jianzhong Guo, Jiashi Li, Jiawei Wang, Jingchang Chen, Jingyang Yuan, Junjie Qiu, Junlong Li, J. L. Cai, Jiaqi Ni, Jian Liang, Jin Chen, Kai Dong, Kai Hu, Kaige Gao, Kang Guan, Kexin Huang, Kuai Yu, Lean Wang, Lecong Zhang, Liang Zhao, Litong Wang, Liyue Zhang, Lei Xu, Leyi Xia, Mingchuan Zhang, Minghua Zhang, Minghui Tang, Meng Li, Miaojun Wang, Mingming Li, Ning Tian, Panpan Huang, Peng Zhang, Qiancheng Wang, Qinyu Chen, Qiushi Du, Ruiqi Ge, Ruisong Zhang, Ruizhe Pan, Runji Wang, R. J. Chen, R. L. Jin, Ruyi Chen, Shanghao Lu, Shangyan Zhou, Shanhuang Chen, Shengfeng Ye, Shiyu Wang, Shuiping Yu, Shunfeng Zhou, Shuting Pan, and S. S. Li. 2025. Deepseek-r1: Incentiviz-ing reasoning capability in llms via reinforcement learning. CoRR , abs/2501.12948. Guanting Dong, Licheng Bao, Zhongyuan Wang, Kangzhi Zhao, Xiaoxi Li, Jiajie Jin, Jinghan Yang, Hangyu Mao, Fuzheng Zhang, Yutao Zhu, and Zhicheng Dou. 2025a. Agentic entropy-balanced policy optimization. CoRR , abs/2510.14545. Guanting Dong, Yifei Chen, Xiaoxi Li, Jiajie Jin, Hongjin Qian, Yutao Zhu, Hangyu Mao, Guorui Zhou, Zhicheng Dou, and Ji-Rong Wen. 2025b. Tool-Star: Empowering LLM-brained multi-tool reasoner via reinforcement learning. CoRR , abs/2505.16410. Guanting Dong, Jiajie Jin, Xiaoxi Li, Yutao Zhu, Zhicheng Dou, and Ji-Rong Wen. 2025c. RAG-Critic: Leveraging automated critic-guided agentic workflow for retrieval augmented generation. In Pro-ceedings of the 63rd Annual Meeting of the Associa-tion for Computational Linguistics, ACL 2025 .Guanting Dong, Hangyu Mao, Kai Ma, Licheng Bao, Yifei Chen, Zhongyuan Wang, Zhongxia Chen, Ji-azhen Du, Huiyang Wang, Yutao Zhu, Zhicheng Dou, and Ji-Rong Wen. 2025d. Agentic reinforced policy optimization. CoRR , abs/2507.19849. Guanting Dong, Yutao Zhu, Chenghao Zhang, Zechen Wang, Zhicheng Dou, and Ji-Rong Wen. 2024. Un-derstand what LLM needs: Dual preference align-ment for retrieval-augmented generation. CoRR ,abs/2406.18676. 5877 Gemini. 2025. Gemini deep research. https:// gemini.google/overview/deep-research .Grok. 2025. Grok 3 beta — the age of reasoning agents. 
+
+https://x.ai/news/grok-3 .David Hasler and Sabine Süsstrunk. 2003. Measuring colorfulness in natural images. In Human Vision and Electronic Imaging VIII, Santa Clara, CA, USA, January 20, 2003 , volume 5007 of SPIE Proceedings ,pages 87–95. SPIE. Mengkang Hu, Yuhang Zhou, Wendong Fan, Yuzhou Nie, Bowei Xia, Tao Sun, Ziyu Ye, Zhaoxuan Jin, Yingru Li, Qiguang Chen, Zeyu Zhang, Yifeng Wang, Qianshuo Ye, Bernard Ghanem, Ping Luo, and Guo-hao Li. 2025. Owl: Optimized workforce learning for general multi-agent assistance in real-world task automation. Preprint , arXiv:2505.23885. Antonio Jimeno-Yepes, Yao You, Jan Milczek, Sebas-tian Laverde, and Renyu Li. 2024. Financial report chunking for effective retrieval augmented genera-tion. CoRR , abs/2402.05131. Jiajie Jin, Xiaoxi Li, Guanting Dong, Yuyao Zhang, Yu-tao Zhu, Yongkang Wu, Zhonghua Li, Qi Ye, and Zhicheng Dou. 2025a. Hierarchical document refine-ment for long-context retrieval-augmented genera-tion. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics, ACL 2025 .Jiajie Jin, Xiaoxi Li, Guanting Dong, Yuyao Zhang, Yutao Zhu, Zhao Yang, Hongjin Qian, and Zhicheng Dou. 2025b. Decoupled planning and execution: A hierarchical reasoning framework for deep search. 
+
+CoRR , abs/2507.02652. Jiajie Jin, Yanzhao Zhang, Mingxin Li, Dingkun Long, Pengjun Xie, Yutao Zhu, and Zhicheng Dou. 2026. LaSER: Internalizing explicit reasoning into latent space for dense retrieval. CoRR , abs/2603.01425. Jiajie Jin, Yutao Zhu, Xinyu Yang, Chenghao Zhang, and Zhicheng Dou. 2024a. Flashrag: A modular toolkit for efficient retrieval-augmented generation research. CoRR , abs/2405.13576. Jiajie Jin, Yutao Zhu, Yujia Zhou, and Zhicheng Dou. 2024b. BIDER: bridging knowledge inconsistency for efficient retrieval-augmented llms via key sup-porting evidence. In Findings of the Association for Computational Linguistics, ACL 2024, Bangkok, Thailand and virtual meeting, August 11-16, 2024 ,pages 750–761. Association for Computational Lin-guistics. Xiaoxi Li, Guanting Dong, Jiajie Jin, Yuyao Zhang, Yujia Zhou, Yutao Zhu, Peitian Zhang, and Zhicheng Dou. 2025a. Search-o1: Agentic search-enhanced large reasoning models. CoRR , abs/2501.05366. Xiaoxi Li, Wenxiang Jiao, Jiarui Jin, Guanting Dong, Ji-ajie Jin, Yinuo Wang, Hao Wang, Yutao Zhu, Ji-Rong Wen, and Zhicheng Dou. 2025b. DeepAgent: A gen-eral reasoning agent with scalable toolsets. CoRR ,abs/2510.21618. Xiaoxi Li, Wenxiang Jiao, Jiarui Jin, Shijian Wang, Guanting Dong, Jiajie Jin, Hao Wang, Yinuo Wang, Ji-Rong Wen, Yutao Zhu, and Zhicheng Dou. 2026. OmniGAIA: Towards native omni-modal AI agents. 
+
+CoRR , abs/2602.22897. Xiaoxi Li, Jiajie Jin, Guanting Dong, Hongjin Qian, Yu-tao Zhu, Yongkang Wu, Ji-Rong Wen, and Zhicheng Dou. 2025c. Webthinker: Empowering large rea-soning models with deep research capability. CoRR ,abs/2504.21776. OpenAI. 2025a. Introducing deep re-search. https://openai.com/index/ introducing-deep-research .OpenAI. 2025b. Openai gpt-5. https://openai.com/ gpt-5/ .Yunpeng Ren, Wenxin Hu, Ziao Wang, Xiaofeng Zhang, Yiyuan Wang, and Xuan Wang. 2021. A hybrid deep generative neural model for financial report genera-tion. Know.-Based Syst. , 227(C). John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. 2017. Proximal policy optimization algorithms. CoRR , abs/1707.06347. Jiabin Tang, Tianyu Fan, and Chao Huang. 2025. AutoAgent: A Fully-Automated and Zero-Code Framework for LLM Agents. Preprint ,arXiv:202502.05957. Yong-En Tian, Yu-Chien Tang, Kuang-Da Wang, An-Zi Yen, and Wen-Chih Peng. 2025. Template-based fi-nancial report generation in agentic and decomposed information retrieval. In Proceedings of the 48th In-ternational ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR 2025, Padua, Italy, July 13-18, 2025 , pages 2706–2710. ACM. Harsh Trivedi, Niranjan Balasubramanian, Tushar Khot, and Ashish Sabharwal. 2023. Interleaving retrieval with chain-of-thought reasoning for knowledge-intensive multi-step questions. In Proceedings of the 61st Annual Meeting of the Association for Com-putational Linguistics (Volume 1: Long Papers), ACL 2023, Toronto, Canada, July 9-14, 2023 , pages 10014–10037. Association for Computational Lin-guistics. Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Ed H. Chi, Quoc Le, and Denny Zhou. 2022. Chain of thought prompting elicits reasoning in large language models. CoRR , abs/2201.11903. Yingqian Wu, Qiushi Wang, Zefei Long, Rong Ye, Zhongtian Lu, Xianyin Zhang, Bingxuan Li, Wei Chen, Liwen Zhang, and Zhongyu Wei. 2025. Fin-team: A multi-agent collaborative intelligence sys-tem for comprehensive financial scenarios. arXiv preprint arXiv:2507.10448 .5878 Yijia Xiao, Edward Sun, Di Luo, and Wei Wang. 2025. Tradingagents: Multi-agents llm financial trading framework. Preprint , arXiv:2412.20138. Hongyang Yang, Boyu Zhang, Neng Wang, Cheng Guo, Xiaoli Zhang, Likun Lin, Junlin Wang, Tianyu Zhou, Mao Guan, Runjia Zhang, et al. 2024. Finrobot: An open-source ai agent platform for financial applica-tions using large language models. arXiv preprint arXiv:2405.14767 .Zhaorui Yang, Bo Pan, Han Wang, Yiyao Wang, Xingyu Liu, Minfeng Zhu, Bo Zhang, and Wei Chen. 2025. Multimodal deepresearcher: Generating text-chart interleaved reports from scratch with agentic frame-work. Preprint , arXiv:2506.02454. Shunyu Yao, Jeffrey Zhao, Dian Yu, Izhak Shafran, Karthik R Narasimhan, and Yuan Cao. 2022. React: Synergizing reasoning and acting in language models. In NeurIPS 2022 Foundation Models for Decision Making Workshop .Wentao Zhang, Yilei Zhao, Chuqiao Zong, Xinrun Wang, and Bo An. 2025. Finworld: An all-in-one open-source platform for end-to-end finan-cial ai research and deployment. arXiv preprint arXiv:2508.02292 .5879 Appendix 
+
+A Statement on the Use of LLMs 13 B Potential Risks 13 C Further Analysis of FinSight 14 
+
+C.1 Stability Analysis . . . . . . . . . 14 C.2 Dimension-Specific Variance Analysis . . . . . . . . . . . . . . 14 C.3 Cross-Model Verification . . . . . 14 C.4 Quantitative Visual Analysis . . . 14 C.5 Human Evaluation . . . . . . . . 14 C.6 Report Length and Quality . . . . 15 
+
+D Implementation Details of Baselines 16 E Implementation Details of FinSight 17 F Construction of the Financial Report Generation Benchmark 17 
+
+F.1 Questions . . . . . . . . . . . . . 17 F.2 Golden Referenced Reports . . . . 17 F.3 Evaluation Metrics . . . . . . . . 17 
+
+G Evaluation Details 19 
+
+G.1 LLM Evaluation Process . . . . . 19 G.2 Human Evaluation Process . . . . 20 G.3 Citation Accuracy Evaluation . . . 21 G.4 Key Fact Recall Evaluation . . . . 22 
+
+H A Case of Company Research Question 22 I Report Gallery 22 
+
+A Statement on the Use of LLMs 
+
+During the preparation of this manuscript, we use LLMs as a general-purpose assistance tool. The primary role of the LLM is to aid in improving the clarity and readability of the text, as well as to ac-celerate the implementation of our research ideas. Specific applications include: (1) Language and Grammar Correction: Polishing sentence structure, correcting grammatical erros, and refining word choices to enhance the overall quality of the writing. (2) Paraphrasing and Style Refinement: Rephrasing sentences and paragraphs to ensure consistency in tone and style throughout the paper. (3) Code Im-plementation Assistance: Generating code snippets and providing debugging support to help imple-ment the proposed algorithms and experimental setups. It should be noted that all core research concepts, experimental design, data analysis, and conclusions are developed exclusively by the human authors. Any content or suggestions generated by the LLM, including code, are critically checked, and substan-tially edited by the authors to ensure accuracy. The authors take full responsibility for the final content of this paper. 
+
+B Potential Risks 
+
+While FinSight demonstrates significant advance-ments in automated financial deep research, the deployment of such a system in real-world scenar-ios introduces several potential risks that must be carefully managed. 
+
+Over-Reliance and Financial Liability. Al-though FinSight outperforms existing baselines in factual accuracy (achieving 54.6% on key financial facts), it does not reach 100% precision. The pro-fessional presentation of the reports—characterized by high-quality visualizations and authoritative tone may inadvertently induce automation bias ,where users trust the system’s output without suffi-cient verification. In the financial domain, where decisions involve substantial capital, minor halluci-nations in numerical data or misinterpretations of market sentiment can lead to significant economic loss. Therefore, FinSight should be positioned as an auxiliary tool for human analysts rather than a fully autonomous financial advisor. 
+
+Security Risks in Code Execution. The core of our framework, the Code Agent with Variable Memory (CAVM), relies on the autonomous gener-ation and execution of Python code to process data and render charts. While this enables flexible data manipulation, it introduces security vulnerabilities common to code-interpreting agents. Without a strictly sandboxed environment, there is a risk that the agent could generate or execute malicious code, particularly if prompted by adversarial inputs or if it ingests compromised data from external web sources. Future iterations must implement rigorous sandboxing and code-vetting protocols. 
+
+Data Provenance and Copyright. FinSight ag-gregates information from the open web to generate commercial-grade reports. This raises concerns re-garding data provenance and intellectual property. Analyzing and restructuring proprietary financial data or news content without explicit licensing may violate copyright regulations or terms of service of 5880 specific data providers. Furthermore, the system’s reliance on web search means the quality of the re-port is bound by the quality of available public data, which may contain biases or outdated information. 
+
+Potential for Market Manipulation. The effi-ciency of FinSight in generating high-quality, per-suasive financial narratives could be misused by malicious actors. The system could potentially be engineered to rapidly produce large volumes of biased reports intended to manipulate market senti-ment (e.g., “pump and dump” schemes) or damage the reputation of targeted companies. Safeguards, such as watermarking generated content and re-stricting API access, are necessary to mitigate the risk of generating synthetic financial misinforma-tion at scale. 
+
+C Further Analysis of FinSight 
+
+C.1 Stability Analysis 
+
+To measure the sensitivity of our evaluation to stochastic variations, we repeated the evaluation process three times using Gemini-2.5-Pro as the judge model. For each run, we use the same evalu-ation prompt and rubric but with different random seeds. The 95% Confidence Intervals (CI) are cal-culated as μ ± 1.96 × σ/ √n where n = 3 .As shown in Table 5, the 95% confidence in-tervals are consistently within ±1.0 point across all metrics, demonstrating the stability of our eval-uation protocol. We attribute this to the robust evaluation design that anchors scoring against a provided Golden Report and utilizes a detailed, list-wise grading rubric. 
+
+C.2 Dimension-Specific Variance Analysis 
+
+We further analyzed the standard deviation across specific evaluation dimensions to understand which aspects of report quality are more reliably assessed by LLM judges. Table 6 reveals important patterns: (1) Struc-tural and linguistic metrics (e.g., Structural Logic ,
+
+Analytical Insight ) exhibit high stability with Std 
+
+< 1.0, indicating that LLM judges reliably assess writing quality. (2) Factual metrics (e.g., Textual Faithfulness ) show moderate variance, reflecting inherent difficulty in verifying factual claims. (3) 
+
+Visual metrics (e.g., Text-Image Coherence , Chart Expressiveness ) display slightly higher variance, as multimodal assessment involves more subjec-tive judgment. Despite these variations, the overall ranking of methods remains consistent across runs. 
+
+C.3 Cross-Model Verification 
+
+To investigate whether Gemini-2.5-Pro exhibited “self-preference bias” (favoring its own outputs), we employed GPT-5 as an independent evaluator using the identical prompt and rubric. As shown in Table 7, the ranking order re-mains highly consistent between the two judges (Kendall’s τ = 0 .764 , p = 0 .008 ). Notably, even when evaluated by GPT-5, Gemini-2.5-Pro Deep Research retains the second-place position, and 
+
+FinSight consistently achieves the top rank. This confirms that FinSight ’s superior performance is attributable to objective report quality rather than evaluator bias. 
+
+C.4 Quantitative Visual Analysis 
+
+To rigorously quantify the presentation qual-ity and validate the effectiveness of our Itera-tive Vision-Enhanced Mechanism , we implement three reference-free Image Quality Assessment (IQA) metrics (Hasler and Süsstrunk, 2003): • Colorfulness : Measures the chromatic dis-tinction between visual elements, computed as 
+
+√
+
+σ2 
+
+> rg
+
++ σ2 
+
+> yb
+
++ 0 .3 ×
+
+√
+
+μ2 
+
+> rg
+
++ μ2
+
+> yb
+
+, where 
+
+rg = R − G and yb = 0 .5( R + G) − B.• RMS Contrast : Measures luminance contrast using the root-mean-square of pixel intensities, correlating with the legibility of labels and grid lines. • Edge Density : Measures information density versus visual clutter using Canny edge detec-tion, computed as the ratio of edge pixels to total pixels. We argue that pixel-wise metrics (e.g., MSE, SSIM) are ill-suited for chart evaluation, as dif-ferent rendering engines produce large pixel dis-crepancies even when plotting identical data. The IQA metrics above provide a more meaningful as-sessment of visual quality. As shown in Table 8, our Iterative Vision-Enhanced Mechanism approx-imately doubles the scores across all three dimen-sions, objectively validating that the VLM critic loop significantly improves the aesthetic quality and information density of the generated charts. 
+
+C.5 Human Evaluation 
+
+As illustrated in Figure 7, our key observations are: 
+
+(1) Validation of Automated Metrics: Figure 5(b) 5881 Table 5: Overall evaluation results with 95% confidence intervals (subscript). Bold denotes the highest score, Underlined denotes the second highest. 
+
+Model Factual Analytical Presentation Avg. Cons. Faith. T-I. Rich. Cover. Ins. Logic Lang. Vis. 
+
+LLM with Search Tools 
+
+GPT-5 w/ Search 5.95 ±0.48 6.35 ±0.39 4.77 ±0.72 5.43 ±0.58 4.52 ±0.51 5.09 ±0.49 6.53 ±0.27 5.87 ±0.35 3.90 ±0.79 5.38 ±0.51 
+
+Claude-4.1-Sonnet w/Search 5.78 ±0.52 5.92 ±0.55 3.55 ±0.65 5.58 ±0.49 5.25 ±0.51 5.01 ±0.46 6.34 ±0.26 6.07 ±0.40 2.59 ±0.51 5.12 ±0.48 
+
+DeepSeek-R1 w/ Search 6.26 ±0.36 5.92 ±0.44 4.08 ±0.37 6.68 ±0.26 6.33 ±0.34 6.62 ±0.41 7.03 ±0.20 6.79 ±0.29 3.35 ±0.45 5.90 ±0.35 
+
+Deep Research Agent 
+
+Grok Deep Search 4.71 ±0.81 5.72 ±0.59 4.21 ±0.57 4.90 ±0.55 4.03 ±0.58 4.35 ±0.55 5.87 ±0.42 5.61 ±0.48 3.76 ±0.53 4.79 ±0.56 
+
+Perplexity Deep Research 5.02 ±0.61 5.74 ±0.63 4.03 ±0.97 3.88 ±0.60 3.40 ±0.53 3.65 ±0.59 5.47 ±0.44 4.92 ±0.47 3.42 ±0.97 4.39 ±0.65 
+
+Gemini-2.5-Pro Deep Research 5.92 ±0.61 6.66 ±0.56 4.32 ±0.91 6.19 ±0.65 6.03 ±0.61 5.74 ±0.62 6.77 ±0.40 6.70 ±0.43 3.23 ±0.95 5.73 ±0.64 
+
+OpenAI Deep Research 6.87 ±0.52 6.78 ±0.34 4.58 ±0.51 6.79 ±0.35 6.83 ±0.30 7.33 ±0.40 7.56 ±0.25 7.58 ±0.31 3.66 ±0.50 6.44 ±0.39 
+
+FinSight (ours) 6.84 ±0.59 7.59 ±0.52 7.84 ±0.52 8.49 ±0.47 8.44 ±0.50 7.78 ±0.48 7.82 ±0.38 7.98 ±0.33 8.57 ±0.57 7.93 ±0.49 
+
+Table 6: Average standard deviation across all models for each evaluation dimension. 
+
+Dimension Avg. Std. 
+
+Structural Logic (Logic) 0.675 Professional Language (Lang.) 0.848 Analytical Insight (Ins.) 0.932 Information Coverage (Cover.) 0.966 Core Conclusion Consistency (Cons.) 1.010 Information Richness (Rich.) 1.058 Textual Faithfulness (Faith.) 1.213 Chart Expressiveness (Vis.) 1.340 Text-Image Coherence (T-I.) 1.470 Factual Analytical Present. Total 0.0 0.2 0.4 0.6 0.8 1.0   
+
+> Correlation / Agreement
+> 0.64 0.60 0.68 0.76 0.47 0.48 0.86 0.65
+
+Evaluation Reliability  
+
+> Human-LLM (r) Inter-Rater (α)
+
+Figure 7: Reliability analysis metrics. High Human-LLM correlation ( r) validates our automated judges, and robust Inter-Rater reliability ( α) confirms the consensus among human experts. 
+
+details the reliability metrics. We observe a strong positive correlation between human and LLM scor-ing (Total Score r = 0 .76 ), which validates the reliability of the automated evaluation frame-work used in our main experiments. (2) Robust Inter-Rater Agreement: The consistently high α
+
+values in Figure 5(b), particularly in the Presen-tation dimension ( α = 0 .86 ), underscore that the 10 3 10 4 10 5
+
+Report Length 2468Average Score 
+
+> Finsight (Ours) DeepSeek w/ Search Gemini-2.5-Pro DR GPT-5 w/ Search OpenAI DR Perplexity DR
+
+Figure 8: Correlation between report length and quality score across different methods. 
+
+visual and structural advantages of FinSight are objectively recognizable and consensus-based. 
+
+C.6 Report Length and Quality 
+
+To further investigate the characteristics of the gen-erated reports, we analyze the relationship between report length and overall quality score, as illus-trated in Figure 8. The plot shows that the outputs from our method are concentrated in the top-right quadrant, which indicates that our generated re-ports are not only comprehensive and of substan-tial length (typically over 20,000 words) but also of superior quality. We attribute this strong and consis-tent performance to our proposed two-stage writing framework. By first generating a concise Chain-of-Analysis, the model can then compose the final report based on richer, well-structured information, ensuring both analytical depth and coherence. In contrast, baseline methods exhibit significant limitations. Simpler approaches like LLM with search tool, which often rely on single-pass gener-5882 Table 7: Cross-model evaluation comparison between GPT-5 and Gemini-2.5-Pro as judges.                                                
+
+> Method Score (GPT-5) Score (Gemini) Rank (GPT-5) Rank (Gemini)
+> GPT-5 w/ Search 6.63 5.38 45Claude-4.1-Sonnet w/ Search 4.71 5.12 76DeepSeek-R1 w/ Search 6.75 5.90 33Grok Deep Search 4.71 4.79 87Perplexity Deep Research 6.08 4.39 68OpenAI Deep Research 6.19 5.73 54Gemini-2.5-Pro Deep Research 6.85 6.44 22
+> FinSight (ours) 8.04 7.93 11
+> Table 8: Quantitative visual quality comparison. Higher Colorfulness and Contrast indicate better aesthetic qual-ity; Edge Density reflects information density.
+> Metric FinSight (Full) w/o Iter. Vision
+> Colorfulness 32.35 15.81 Contrast 31.71 15.47 Edge Density 0.0056 0.0027
+
+ation, are typically constrained to shorter reports. Meanwhile, other deep research agents such as OpenAI DR and Perplexity DR display a wide scat-ter of data points across the plot, which signifies a critical lack of consistency. For these methods, a greater length does not reliably translate into higher quality, highlighting the effectiveness of our struc-tured, two-stage approach. 
+
+Length-Controlled Evaluation. To address potential length bias in LLM-based evaluations, we conducted an additional experiment with strict length constraints. We applied a truncation strat-egy to limit FinSight ’s output to approximately 10,000 words, aligning it with baseline models. As shown in Table 9, even with forced truncation (which naturally penalizes coherence and complete-ness), FinSight (10k) achieves an overall score of 6.93, surpassing Gemini-2.5-Pro (6.82) and sig-nificantly outperforming OpenAI Deep Research (6.11). This demonstrates that FinSight ’s perfor-mance gain derives from high-quality content syn-thesis rather than mere verbosity. 
+
+D Implementation Details of Baselines 
+
+We mainly compare our method with the following two types of baselines: 
+
+(1) LLMs with Search Tools. 
+
+• OpenAI GPT-5 w/Search : The latest Ope-nAI’s GPT model with web search API for research question. • Claude-4.1-Sonnet w/Search The latest An-thropic’s reasoning LLM with web search API for research question. • DeepSeek-R1 w/ Search : The DeepSeek’s LLM integrated with web search API for re-search question. 
+
+(2) Deep Research Agents. 
+
+• Grok Deep Search : The xAI’s Deep Search applications, powered by the latest Grok model. • Perplexity Deep Research : A commercial AI research assistant integrating multi-step search and analysis, optimized for rapid information aggregation. • OpenAI Deep Research : A multi-step web research agent built on ChatGPT that searches, analyzes, and synthesizes information from multiple sources to produce research-grade re-ports with citations. • Gemini-2.5-Pro Deep Research : Google’s ad-vanced research agent featuring multi-turn plan-ning, deep web navigation, and multi-source evidence integration. We evaluate these baselines directly on their offi-cial API and web applications, the evaluation date is September 2025. For consistency across differ-ent systems, we use the following unified prompt template to get the report. As commercial “black-box” systems, we have no control over their inter-nal search routing or region settings. We utilized English prompts for task instructions across all models, while keeping entity names (e.g., company names) in their original Chinese characters to en-sure correct query interpretation. We argue this setting is fair and potentially dis-advantageous to FinSight for two reasons: (1) 
+
+Relevance over Bias : Retrieval quality is driven primarily by query language and specificity rather 5883 Table 9: Length-controlled evaluation results. FinSight (10k) represents reports truncated to 10,000 words.                                                     
+
+> Method Cons. Faith. T-I. Rich. Cover. Ins. Logic Lang. Vis. Avg.
+> OpenAI DR 5.60 7.45 4.90 6.35 6.40 5.90 6.90 6.85 4.65 6.11 Gemini-2.5-Pro DR 7.10 6.80 4.65 7.45 7.75 7.85 7.65 7.85 4.25 6.82
+> FinSight (Full) 6.85 7.50 7.85 8.70 8.30 8.45 8.05 8.10 9.00 8.09
+> FinSight (10k) 6.20 6.70 7.00 6.60 6.75 7.05 6.60 7.50 8.05 6.93
+
+than region settings. The China region setting was necessary to retrieve specific local filings. (2) Com-mercial Advantage : Commercial deep research systems often have access to high-quality search resources and curated financial databases with so-phisticated internal query rewriting. In contrast, 
+
+FinSight relies solely on the open Google Search API. 
+
+PROMPT 
+
+Please help me write a detailed research re-port on the corporate finance of {topic}, which should be rich in both text and charts. Give me the standardized citations at the end of the re-port (including serial numbers and correspond-ing references). 
+
+E Implementation Details of FinSight 
+
+Backbone For Multi-source Data Collection Agent, Deep Search Agent and Data Analysis Agent, we use the DeepSeek-V3 as the backbone model. For Report Generation Agent, we use 
+
+DeepSeek-R1 as the backbone model. The max-imum input length is 81,920 tokens, and the maxi-mum output length is 16,384 tokens. 
+
+Data Collection We implement the financial api tool based on akshare 2 package in Python. For web search, we use the Google Search API and the number of retrieved results fixed at the top 10. For web content acquisition, we employ Playwright 3 to simulate a browser for webpage content extraction. 
+
+Retrieval We use Qwen3-Embedding-0.6B to generate embeddings for data and CoA segments. Then we use the cosine similarity to select the rele-vant data and CoA segments for each section. 
+
+Iterative Vision-Enhanced Mechanism We use the Qwen2.5-VL-72B as the critic vision-language model in the chart generation stage. To balance effectiveness and cost, we perform three iterations of the critic process. 
+
+> 2https://github.com/akfamily/akshare
+> 3https://playwright.dev/
+
+Ablation Study We conduct ablation study on 
+
+5 company questions, which includes: Cambricon Technologies, Li Auto-W, Pop Mart, 3SBio, China Mobile. Some variants are as follows: • w/o Iteration Vision-Enhanced Mechanism 
+
+We remove the iterative refinement process and plot charts in a single pass. • w/o Two-Stage Writing Framework We only concatenate the CoA segments to output the final report. • w/o Dynamic Search-Enhanced Strategy We remove the Dynamic Search-Enhanced Strat-egy from the Data Collection and Report Gen-eration process. 
+
+F Construction of the Financial Report Generation Benchmark 
+
+F.1 Questions 
+
+We select the most popular five A-share companies, five Hong Kong-stock companies, and ten repre-sentative industries from https://www.djyanbao. com as the benchmark research questions. These companies and industries cover a diverse set of market sectors and provide a comprehensive foun-dation for evaluating the effectiveness of deep re-search systems. 
+
+F.2 Golden Referenced Reports 
+
+To establish human expert-level benchmark, we collect the latest equity and industry research re-ports from well-known Chinese securities firms, as shown in Table 10. These golden references cover both company-level and industry-level analy-ses across A-shares, Hong Kong stocks, and major industries. We will released all golden reports after camera-ready version. 
+
+F.3 Evaluation Metrics 
+
+We further illustrate the metrics we used for evalu-ation: 5884 Table 10: Golden Referenced Reports from Chinese Securities Firms 
+
+Market Company / Industry Securities Firm 
+
+A-shares SMIC (688981) Soochow Securities Cambricon Technologies (688256) Donghai Securities China Mobile (600941) Zhongtai Securities Skshu Paint (603737) Huatai Securities Yiwu China Commodities City (600415) Guolian Minsheng Securities Hong Kong Stocks Pop Mart (09992) Zhongtai Securities SenseTime (00020) Zhongtai Securities Li Auto-W (02015) Huayuan Securities 3SBio (01530) Huatai Securities UBTECH Robotics (09880) Guohai Securities Industries Semiconductor Industry Kaiyuan Securities Food & Beverage Industry Huachuang Securities Basic Chemical Industry Zhongtai Securities Steel Industry Orient Securities Construction & Decoration Industry Guosheng Securities Environmental Protection & Public Utilities (Controlled Nuclear Fusion) Huachuang Securities Light Manufacturing (Durable Consumer Goods) Guotai Haitong Securities K12 Education Industry Guosheng Securities Media Industry (Short Drama Overseas Expan-sion) Soochow Securities Transportation (Cross-border E-commerce Lo-gistics) Maigao Securities 
+
+(1) Factual Metrics Measure the textual quality and factual accuracy of the final report. • Core Conclusion Consistency : Whether the core conclusions in the generated report are consistent with those in the reference report. • Textual Faithfulness : Whether the arguments in the report are properly supported by citations from the reference. • Text-Image Coherence : Whether the report integrates images into the discussion, and whether the textual and visual descriptions align. 
+
+(2) Analysis Effectiveness Measure whether the financial report provides sufficient information and insights for investors. • Information Richness : The number of distinct information points included in the report. • Coverage : The extent to which key informa-tion from the golden reference report is cov-ered. • Analytical Insight : Whether the report pro-vides critical analysis, original insights, and forward-looking recommendations. 
+
+(3) Presentation Quality Measure the presenta-tion quality of the final report. • Structural Logic : The logical organization of each section and the overall structural sound-ness of the report. • Language Professionalism : Whether the lan-guage conforms to financial terminology, using the golden report as a reference. • Chart Expressiveness : The effectiveness of charts in supporting the narrative, including their informativeness and aesthetic quality. 5885 G Evaluation Details 
+
+G.1 LLM Evaluation Process 
+
+We adopt Gemini-2.5-Pro as the backbone eval-uation model. To ensure fair comparison across reports, we employ a list-wise evaluation strategy, where the model is provided with all candidate re-ports along with the golden reference report and assigns scores accordingly. The nine metrics men-tioned above can be divided into two parts, one is unrelated to the golden report and the other is related to the golden report. For these two types, we have designed two types of prompts, which are listed below. 
+
+Evaluation Instruction for Golden Report Irrelevant Metrics 
+
+# [TASK] Your task is to act as an expert financial analyst and editor. You will perform a rigorous, **comparative evaluation** of a list of financial research reports. Your goal is to produce a structured critique for each report based on how effectively it addresses the central **Research Question**, using the provided **Golden Standard Report** as a quality bench-mark. # [INPUTS] * **Research Question:** Research Question * **Golden Standard Report:** Given in file format, the one starting with ’golden’ is the ’golden standard report’ * **Reports to Evaluate:** Reports # [EVALUATION METHODOLOGY] To ensure fairness and accuracy, you must follow this three-step process for **each report** in the ‘Reports to Evaluate‘ list: 1. **Step 1: Establish the Benchmark (Internal Thought Process)** * For each of the six evaluation dimensions, first thoroughly analyze the **Golden Standard Report**. Identify its key characteristics, depth, and quality to create a mental bench-mark for what constitutes a high-quality, professional report (which corresponds to a score of 7). 2. **Step 2: Comparative Analysis (Internal Thought Pro-cess)** * Now, analyze the report currently being evaluated. For each dimension, find concrete evidence (e.g., specific quotes, data points, chart quality, structural features). * **Directly compare** this evidence against the benchmark established in Step 1. Note where the report meets, exceeds, or falls short of the Golden Standard. 3. **Step 3: Score and Justify (Final Output Generation)** * Based on the comparison in Step 2, assign a score from 1 to 10 for the dimension, following the ‘Benchmark-Based Scoring‘ rules below. * Write a **concise, one-sentence rationale** that justifies your score by referencing your comparative findings. # [SCORING GUIDELINES] Adhere strictly to these principles to maintain objectivity: * **Benchmark-Based Scoring:** * **The Golden Standard Report is the benchmark for a score of 7.** * A report demonstrating a **similar level of quality**, depth, and execution as the Golden Standard on a specific dimension should receive a score of **7**. * Scores of **8-10** are reserved for reports that **demon-strably exceed** the Golden Standard in that dimension (e.g., providing deeper insights, more comprehensive data, or superior visualizations). * Scores of **1-6** indicate that the report **falls short** of the Golden Standard’s quality in that dimension, with the score reflecting the de-gree of the gap. * **Justification for Extremes:** Scores of **9-10** (ex-ceptional) or **1-2** (critically flawed) require a particu-larly strong and specific justification in the rationale. # [EVALUATION FRAMEWORK and CRITERIA] ### **Dimension 1: Information Richness (Score 1-10)** * **Definition:** Measures the concentration of substan-tive, verifiable facts and data points relevant to the research question, while minimizing filler content. ### **Dimension 2: Textual Faithfulness (Score 1-10)** * **Definition:** Measures whether significant claims, data, and forecasts are verifiably supported by provided "References / Data Sources". ### **Dimension 3: Text-Image Coherence (Score 1-10)** * **Definition:** Assesses if charts and tables are con-sistent with the text and if the text provides meaningful interpretation that supports the core analysis. ### **Dimension 4: Analytical Insight (Score 1-10)** * **Definition:** Evaluates the quality of the analysis, fo-cusing on critical thinking, original insights, and actionable, forward-looking conclusions that directly address the re-search question. ### **Dimension 5: Structural Logic (Score 1-10)** * **Definition:** Measures the structural integrity and log-ical flow of the argument, assessing if the report builds a clear and compelling case from evidence to conclusion. ### **Dimension 6: Chart & Table Expressiveness (Score 1-10)** * **Definition:** Focuses on the quality of data visualiza-tions themselves—their clarity, ability to reveal patterns, and effectiveness in communicating key information. # [OUTPUT FORMAT] Provide your evaluation in the following strict JSON format. **For each score, you must provide a brief, one-sentence rationale.** Do not add any conversational text outside of this structure. Use the file name of each report as its report id. Now start your evaluation of the given reports. Carefully read each report and give a score. 
+
+Evaluation Instruction for Golden Report Relevant Metrics 
+
+**[ROLE]** You are an expert financial analyst and editor, specializing in the comparative analysis of research reports. **[TASK]** Your task is to rigorously evaluate a list of **Generated Reports** by comparing each one against a **Benchmark Report** (a professionally written ’gold standard’). You will assess each Generated Report’s quality across three key dimensions on a scale of 1 to 10, producing a structured JSON output with scores and justifications. **[INPUTS]** 1. **‘Benchmark Report‘**: A high-quality, professional research report that serves as the "gold standard" for this evaluation. All comparisons should be made against this document. The file name of the benchmark report begins with "golden_". 2. **‘Generated Reports‘**: A list of one or more reports to be evaluated against the Benchmark Re-port. 3. **‘Report ID‘**: An identifier for each Generated Report. Use the file name as the report ID. **[EVALUATION METHODOLOGY]** To ensure fairness and accuracy, you must follow this three-step process for **each Generated Report**: 1. **Step 1: Establish the Benchmark (Internal Thought Process)** 5886 * For each of the three evaluation dimensions, first thor-oughly analyze the **Benchmark Report**. Identify its key characteristics, depth, and quality to create a mental benchmark for what constitutes a score of **7**. 2. **Step 2: Comparative Analysis (Internal Thought Pro-cess)** * Now, analyze the Generated Report. For each dimen-sion, find concrete evidence (e.g., specific conclusions, data points included/omitted, linguistic style). * **Directly com-pare** this evidence against the benchmark established in Step 1. Note where the report meets, exceeds, or falls short of the Benchmark Report. 3. **Step 3: Score and Justify (Final Output Generation)** * Based on the comparison in Step 2, assign a score from 1 to 10 for the dimension, following the ‘SCORING GUIDE-LINES‘ below. * Write a **concise, one-sentence ratio-nale** that justifies your score by referencing your compar-ative findings. **[SCORING GUIDELINES]** Adhere strictly to these principles to maintain objectivity: * **Benchmark-Based Scoring:** * **The Benchmark Report is the standard for a score of 7.** * A report demon-strating a **similar level of quality**, depth, and execution as the Benchmark Report on a specific dimension should receive a score of **7**. * Scores of **8-10** are reserved for reports that **demonstrably exceed** the Benchmark Report in that dimension (e.g., providing a more nuanced conclusion, broader data coverage, or more sophisticated language). * Scores of **1-6** indicate that the report **falls short** of the Benchmark Report’s quality in that dimension, with the score reflecting the degree of the gap. * **Justification for Extremes:** Scores of **9-10** (excep-tional) or **1-2** (critically flawed) require a particularly strong and specific justification in the rationale. **[EVALUATION FRAMEWORK & CRITERIA]** ### **Dimension 1: Core Conclusion & Data Consistency (Score 1-10)** * **Definition:** Measures the alignment of the Generated Report’s core thesis, key arguments, and supporting data points with those presented in the Benchmark Report. ### **Dimension 2: Information Coverage (Score 1-10)** * **Definition:** Assesses the extent to which the Gener-ated Report includes the key information points, topics, and analytical angles present in the Benchmark Report. ### **Dimension 3: Professional Language & Tone (Score 1-10)** * **Definition:** Evaluates the linguistic quality of the Generated Report, using the Benchmark Report’s writing style, tone, and vocabulary as the standard for professional financial analysis. **[OUTPUT FORMAT]** Provide your evaluation in the following strict JSON format. For each score, you must pro-vide a brief, one-sentence rationale that explains the score relative to the benchmark. Do not add any conversational text outside of this structure. Now start your evaluation of the given reports. Carefully read each report and give a score. 
+
+G.2 Human Evaluation Process 
+
+To validate our automated evaluation and substan-tiate claims about report quality, we conducted a comprehensive human evaluation study. We recruited 6 graduate students with finan-cial backgrounds (majoring in Finance, Eco-nomics, or related fields) to serve as expert an-notators. To save costs, we selected the two strongest baselines, Gemini-2.5-Pro Deep Re-search and OpenAI Deep Research , to compare against FinSight . Each annotator reviewed a ran-dom subset of 10 research topics, evaluating all three systems’ outputs for each topic. In review-ing process, raters were provided with “Golden Reports” (professional analyst reports from top-tier securities firms) as ground truth references to anchor their judgments. 
+
+Scoring Protocol. To manage cognitive load when evaluating long-form reports, raters scored on a 0–5 scale with 0.5 increments across three consolidated dimensions: Factual (combining Con-sistency, Faithfulness, Text-Image Coherence), An-alytical (combining Richness, Coverage, Insight), and Presentation (combining Logic, Language, Vi-sualization). Scores were scaled ( ×2) to align with our 0–10 automated metrics. 
+
+Table 11: Human evaluation scores (scaled to 0-10). 
+
+Model Fact. Anal. Pres. Total 
+
+OpenAI DR 5.93 5.81 4.75 5.50 Gemini-2.5-Pro DR 6.86 6.73 4.73 6.11 
+
+FinSight 6.68 7.17 7.48 7.11 
+
+Table 12: Human-LLM alignment and inter-rater relia-bility metrics. 
+
+Dimension Pearson r Krippendorff’s α
+
+Factual 0.6360 0.4667 Analytical 0.6003 0.4752 Presentation 0.6757 0.8570 
+
+Total Score 0.7587 0.6474 
+
+We calculated Inter-Rater Reliability using Krip-pendorff’s Alpha ( α) and Human-LLM Alignment using Pearson correlation coefficient ( r). Our key findings are as follows: (1) FinSight achieves the highest total score (7.11), significantly outperform-ing both commercial baselines. (2) The strong pos-itive correlation between human and LLM scoring (Pearson r > 0.75 for Total Score) validates the reliability of our automated evaluation framework. (3) The overall inter-rater reliability ( α = 0 .64 )indicates solid consensus among experts, with ex-ceptionally high agreement in the Presentation di-mension ( α = 0 .86 ), confirming that FinSight ’s multimodal capabilities provide objectively recog-nizable advantages. The instruction for human raters is as follows. 5887 Evaluation Instruction for Human Raters 
+
+# General Instructions 
+
+Thank you for participating in this evaluation. Please assess each report independently based on the three core dimen-sions defined below. Each dimension is scored on a 1 to 5 point scale , allowing for half-points (e.g., 3.5). • 5 points (Excellent): Significantly exceeds expectations; outstanding performance in all aspects. • 4 points (Good): Solid and reliable; comprehensively meets all requirements for a professional report. • 3 points (Passable): Fundamentally adequate, but with clear deficiencies in some areas. • 2 points (Poor): Contains serious flaws; fails to deliver core value. • 1 point (Very Poor): Contains almost no usable infor-mation; logically incoherent or factually incorrect. 
+
+# Dimension 1: Factual - Accuracy & Comprehensiveness 
+
+Definition: Assesses the truthfulness, completeness, and 
+
+objective evidence of the information provided in the re-port. This dimension concerns the solidity of the report’s foundation. 
+
+Score Evaluation Criteria 5 (Excellent) Information is extremely dense, facts are cross-verified and accurate, all key topics are covered, and crucial data is clearly supported by sources. 
+
+4 (Good) Information is solid, facts are generally accurate, most key topics are covered, and major data points are supported by sources. 
+
+3 (Passable) Contains basic facts, but coverage is in-sufficient (e.g., missing key information points), or there are minor factual errors / missing sources. 
+
+2 (Poor) Contains numerous factual errors or se-vere gaps in information; most claims are not supported by data or sources. 
+
+1 (Very Poor) Filled with unverified information, obvi-ous factual errors, or large-scale content omissions. 
+
+# Dimension 2: Analytical - Depth & Logic 
+
+Definition: Assesses the quality of analysis, insightful-ness, and argumentative structure of the report. This di-mension concerns whether the report provides added value beyond a simple recitation of facts. 
+
+Score Evaluation Criteria 5 (Excellent) Insights are profound, drawing unique and forward-looking conclusions from the data. The logical chain is complete, rigorous, and highly persuasive. 
+
+4 (Good) Analysis is reasonable and capable of ef-fective deduction based on facts. The logic is clear, the structure is complete, and the conclusion is consistent with the argumentation. 
+
+3 (Passable) Contains basic analysis, but lacks depth (often just restating facts). The logic is generally coherent but not sufficiently rig-orous. 
+
+2 (Poor) Analysis is superficial or contains logical leaps. There is a weak connection be-tween arguments and evidence; the struc-ture is chaotic. 
+
+1 (Very Poor) Almost no analysis, or filled with logical contradictions. Fails to form a coherent argument. 
+
+# Dimension 3: Presentation - Quality & Professionalism 
+
+Definition: Assesses the readability, effectiveness of charts, and professionalism of the language . This di-mension concerns whether the report can be understood efficiently and clearly. 
+
+Score Evaluation Criteria 5 (Excellent) Language is precise, professional, and authoritative. Charts are exceptionally well-designed, perfectly complementing the text and greatly enhancing the argu-ment. 
+
+4 (Good) Language is professional and fluent. Charts are clear, easy to understand, and effectively support the text’s points; figure-text consistency is good. 
+
+3 (Passable) Language is generally professional but occasionally verbose or inappropriate. Chart quality is average (e.g., unclear, low information), or the connection to the text is weak. 
+
+2 (Poor) Language is unprofessional or contains many errors. Chart quality is poor (e.g., misleading, unreadable), or there is a seri-ous disconnect between figures and text. 
+
+1 (Very Poor) Language is confusing and difficult to read. No charts are used, or the charts provided are completely ineffective. 
+
+G.3 Citation Accuracy Evaluation 
+
+To rigorously evaluate the faithfulness of generated citations, we conducted a comprehensive manual verification study. 
+
+Methodology. Human experts checked the top 50 citations in each generated report to verify whether the cited source actually supported the 5888 Table 13: Citation verification results across all company-level and industry-level tasks.        
+
+> Model Total Checked Accuracy
+> FinSight 469 72.92% (342/469) Gemini-2.5-Pro DR 414 69.81% (289/414)
+
+generated claim. For each citation, annotators clas-sified it as Accurate (the source directly supports the claim), Partially Accurate (the source is related but does not fully support the claim), or Inaccurate 
+
+(the source is irrelevant or contradicts the claim). We report the overall accuracy as the proportion of Accurate citations. As shown in Table 13, even while generating a higher volume of citations, FinSight maintains higher accuracy. We attribute this to our Two-Stage Writing Framework and generative re-trieval mechanism, which identifies references dur-ing the drafting process rather than via post-hoc appending. 
+
+Citation Authority Analysis. We further ana-lyzed source quality by classifying citations into three authority levels: • High Authority : Government/Regulatory bod-ies (SEC, IMF), Official Company Filings, Top Academic/Research Institutions. • Medium Authority : Mainstream Financial Media (Bloomberg, Reuters), Known Market Research Firms. • Low Authority : Social Media, Personal Blogs, Content Farms, or unverified aggregators. 
+
+FinSight utilizes High Authority sources at a rate comparable to commercial baselines ( ∼36.5%). The slightly higher usage of Low Authority sources compared to OpenAI DR reflects our reliance on open web search versus proprietary filtered databases, indicating a direction for future refine-ment. 
+
+G.4 Key Fact Recall Evaluation 
+
+Directly measuring the factuality of long reports is challenging due to the absence of strict ground truth. To quantify factual accuracy, we introduced a Golden Facts Evaluation methodology. 
+
+Methodology. We extracted 13 core financial indicators from the professional Golden Reports as ground truth, covering: (1) Profitability (Gross Mar-gin, Net Margin), (2) Growth (Revenue Growth, Profit Growth), (3) Financial Health (Cash Flow, Debt Ratio), (4) Valuation (PE Ratio, PB Ratio), and (5) Efficiency (ROE, ROA). Human annotators then manually verified how many of these specific data points were accurately retrieved and reported by each model across company-level tasks. 
+
+FinSight achieves significantly higher recall rate, demonstrating superior coverage of critical financial data compared to commercial deep re-search systems. 
+
+H A Case of Company Research Question 
+
+To demonstrate the practical application of our sys-tem, this section shows the case of SenseTime Technology (0020.HK) , a leading artificial intelli-gence company in China. We present the collecting tasks of the Data Col-lection process in Table 16, and an analytical tasks of the Data Analysis process in Table 17. 
+
+I Report Gallery 
+
+We have presented an overview of the report generated by ours here, and the complete re-port can be obtained from https://anonymous. 4open.science/r/FinSight-5841. 5889 Figure 9: The final report of The SenseTime (part). 
+
+Figure 10: The final report of semiconductor industry (part). 5890 Figure 11: The final report of The 3SBio Inc. (part). 
+
+Figure 12: The final report of The China Mobile (part). 5891 Table 14: Key financial information recall across methods. 
+
+Method Avg. Hits (out of 13) Recall Rate Relative 
+
+FinSight 7.1 54.6% –Gemini-2.5-Pro DR 5.0 38.5% -29.6% OpenAI DR 3.9 30.0% -45.1% 
+
+Table 15: Distribution of citation authority across different methods. 
+
+Model High Medium Low Total 
+
+Gemini-2.5-Pro DR 312 (36.7%) 304 (35.8%) 233 (27.4%) 849 OpenAI DR 348 (35.0%) 504 (50.7%) 142 (14.3%) 994 
+
+FinSight 334 (36.5%) 319 (34.8%) 263 (28.7%) 916 
+
+Table 16: The predefined and brainstormed data collection tasks. 
+
+Data Collection  
+
+> 1
+
+Predefined Tasks :  
+
+> 2
+
+" company ": [ 
+
+> 3
+
+{" name ": " Balance Sheet "} ,  
+
+> 4
+
+{" name ": " Income Statement "} ,  
+
+> 5
+
+{" name ": " Cash Flow Statement "} ,  
+
+> 6
+
+{" name ": " Basic Stock Information "} ,  
+
+> 7
+
+{" name ": " Shareholder Structure "} ,  
+
+> 8
+
+{" name ": " Stock Price "} ,  
+
+> 9
+
+{" name ": " Stock - related Financial Data "} ,  
+
+> 10
+
+{" name ": " CSI 300 Daily Index Data "} ,  
+
+> 11
+
+{" name ": " Hang Seng Daily Index Data "} ,  
+
+> 12
+
+{" name ": " NASDAQ Daily Index Data "} ,  
+
+> 13
+
+{" name ": " Investment Rating ",  
+
+> 14
+
+" description ": " Collect analyst investment ratings and target prices from major securities firms (e.g., CITIC Securities , CICC ). Select the most frequent rating across institutions ."  
+
+> 15
+
+},  
+
+> 16
+
+{" name ": " Price -to - Sales Ratio ( PS )",  
+
+> 17
+
+" description ": " Collect the company 's PS data ( PS = Stock Price / Sales per Share ) ."  
+
+> 18
+
+},  
+
+> 19
+
+{" name ": " Return on Equity ( ROE , %) ",  
+
+> 20
+
+" description ": " Collect the company 's ROE data , defined as ( Net Income Attributable to Shareholders / Equity ) or equivalently ( Net Profit Margin xAsset Turnover x Equity Multiplier ) ."  
+
+> 21
+
+},  
+
+> 22
+
+{ " name ": " Competitor Data ",  
+
+> 23
+
+" description ": " Collect comparable data from 5 -8 major peer companies , including financial and operational indicators ."  
+
+> 24
+
+},  
+
+> 25
+
+] 
+
+> 26 27
+
+Brainstormed Tasks : [ 
+
+> 28
+
+{" name ": " Growth Data for AI Subfields in 2024"} ,  
+
+> 29
+
+{" name ": " The Development History of The SenseTime and Main Business "}  
+
+> 30
+
+]5892 Table 17: The illustration of data analysis process and CoA output of a task. 
+
+Data Analysis (We show a predefine task of data analysis, and its CoA output.) Predefined Task 1: Company Development History and Main Business Analysis 
+
+Required Data: Years and corresponding company achievements. 
+
+Description: Organize the company’s key milestones by year (e.g., founding, expansions, product launches, strategic shifts, and M&A) and present them as a timeline with annotated events. Also summarize its current core business scope, including main products, business segments, and market positioning. 
+
+CoA Output: ## SenseTime: Evolution from Computer Vision Pioneer to AI Platform Enterprise ### Executive Summary 
+
+As a global leading artificial intelligence software company, SenseTime has grown into an AI giant valued at over USD 10 billion since its founding in 2014. With the mission of ”persisting in originality and enabling AI to advance human progress", the company has built a comprehensive AI ecosystem covering four major business segments: Smart Business, Smart City, Smart Life, and Smart Auto, through 11 years of continuous innovation and business expansion [Source: SenseTime Group Company Profile]. By 2024, SenseTime employed 3,756 people, with operations spanning over 20 cities worldwide and R&D centers in Hong Kong, Shanghai, Beijing, and Shenzhen [Source: SenseTime Basic Information]. The company’s growth trajectory reflects a typical path of technology firms: from technical breakthroughs, to productization, then to platformization and ecosystemization. Its IPO on the Hong Kong Stock Exchange in 2021 (Ticker: 0020.HK) marked the beginning of a new capital-intensive phase, while the launch of the "Riyadh New" large model system in 2023 signified its strategic pivot toward generative AI [Source: Development History Search Data]. Currently, SenseTime reports annual revenue of RMB 3.772 billion, maintaining technological leadership in computer vision and artificial intelligence [Source: Stock 0020 Income Statement Data]. 
+
+### Development History Analysis Early Stage of Founding and Technology Accumulation (2014–2016) 
+
+Founded on October 15, 2014, in the Cayman Islands by the CUHK Multimedia Lab team, SenseTime initially focused on core R&D in computer vision and deep learning [Source: SenseTime Basic Information]. In 2015, it launched its first facial recognition algorithm and completed its first funding round, laying the foundation for subsequent commercialization. By 2016, it had become the world’s most valuable AI unicorn, reflecting strong capital market recognition. 
+
+@import "SenseTime Development Timeline (2014-2025), horizontal axis = year, vertical axis = milestone importance, annotated with key events (milestone_df)" Productization and Market Expansion (2017–2019) 
+
+In 2017, the launch of the SenseAR augmented reality platform marked the transition from pure research to productization. By 2018, it had completed Series C financing with a valuation exceeding USD 4.5 billion. In 2019, it rolled out Smart City solutions, partnering with key domestic cities and expanding its scope from technology output to integrated solutions. 
+
+Platformization and Capitalization (2020–2022) 
+
+In 2020, the release of the SenseCore AI Infrastructure introduced the concept of industrializing AI, aiming to reduce the cost of AI production factors. On December 30, 2021, SenseTime was listed on the Hong Kong Stock Exchange Main Board, raising about HKD 6 billion [Source: SenseTime IPO Search Data]. In 2022, it launched the ”Riyadh New" foundation model system, officially entering the generative AI space and advancing toward multimodal development. 
+
+Ecosystemization and Deepening Applications (2023–2025) 
+
+In 2023, the company released the ”SenseChat" large language model, further completing its model matrix. In 2024, its Smart Auto business grew rapidly, with partnerships across major automakers. By 2025, SenseTime continued to optimize its large model technologies and achieved deep application deployments in healthcare, finance, and manufacturing. 
+
+### Core Business Structure Analysis 5893 Smart Business (35%) 
+
+Core Products: SenseFoundry Enterprise Ark, AI Content Generation Platform Market Positioning: Provides AI solutions for enterprise digital transformation, focusing on finance, retail, and manufacturing. This is the main revenue driver, contributing about 35% of revenue in 2024 [Source: Business Segment Data]. 
+
+Smart City (30%) 
+
+Core Products: City Ark, traffic management, and surveillance systems Market Positioning: Provides smart governance and public service solutions. Established partnerships with major cities, gaining competitive advantages in smart transportation and public safety. 
+
+Smart Life (20%) 
+
+Core Products: SenseMARS Metaverse Platform, mobile AI applications Market Positioning: Consumer-facing AI applications and metaverse ecosystem. Focuses on AR/VR and mobile internet scenarios, with strong growth potential. 
+
+Smart Auto (15%) 
+
+Core Products: SenseAuto Platform, autonomous driving solutions Market Positioning: Provides intelligent driving and V2X systems for automakers. This segment grew rapidly in 2024, becoming a new growth engine [Source: Smart Auto Data]. 
+
+@import "SenseTime 2024 Revenue Breakdown Pie Chart, showing four business segments (business_df)" 
+
+### Technical Strength and Competitive Advantages 
+
+SenseTime possesses deep academic roots and originality in AI technologies. The company has built full-stack AI capabilities across perception intelligence, decision intelligence, content generation, and content enhancement [Source: Company Profile]. By 2024, it had over 8,000 AI-related patents, maintaining leadership in computer vision, large model training, and AI chips [Source: Patent Data]. Core Competitive Advantages: 1. Technological Originality: Commitment to independent fundamental research and development 2. Platformization Capability: SenseCore enables AI industrial-scale production 3. Ecosystem Completeness: Full product portfolio covering four major domains 4. Talent Density: A world-class AI R&D team 
+
+### Market Position and Prospects 
+
+Industry data show SenseTime as a global leader in computer vision, ranking among top players in market share. In 2024, it was positioned in the Leaders Quadrant of the AI maturity curve, highly rated in both innovation and execution [Source: AI Market Growth Data 2024]. Future Directions: • Large Model Enhancement: Continuous optimization of the ”Riyadh New" large model system • Vertical Integration: Deepened applications in finance, healthcare, and manufacturing • International Expansion: Strengthening presence in Southeast Asia and the Middle East • Tech Convergence: Driving integration of AI with IoT and blockchain 
+
+@import "SenseTime Revenue Growth Trend (2020-2024), showing revenue growth from RMB 3.446B to RMB 3.772B (income_statement)" ### Conclusion 
+
+Through 11 years of development, SenseTime has evolved from a single computer vision technology provider into a comprehensive AI platform enterprise. Its trajectory reflects a clear progression: technology-driven, product iteration, platform building, and ecosystem expansion. With balanced business segments and strong technological capabilities, SenseTime holds a favorable competitive position in the AI industrialization wave. Looking forward, with continuous AI evolution and expanding applications, SenseTime is poised to play a more significant role in the global AI market. To remain competitive, the company must sustain R&D investment, deepen vertical applications, and enhance international collaborations in response to intensifying market and technological challenges. 5894

@@ -1,0 +1,334 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-001.webp",
+      "caption": "",
+      "page": 3,
+      "index": 1,
+      "width": 2270,
+      "height": 822
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-002.webp",
+      "caption": "",
+      "page": 4,
+      "index": 2,
+      "width": 3255,
+      "height": 3234
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-003.webp",
+      "caption": "",
+      "page": 6,
+      "index": 3,
+      "width": 347,
+      "height": 347
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-004.webp",
+      "caption": "",
+      "page": 6,
+      "index": 4,
+      "width": 722,
+      "height": 491
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-005.webp",
+      "caption": "",
+      "page": 6,
+      "index": 5,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-006.webp",
+      "caption": "",
+      "page": 6,
+      "index": 6,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-007.webp",
+      "caption": "",
+      "page": 6,
+      "index": 7,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-008.webp",
+      "caption": "",
+      "page": 6,
+      "index": 8,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-009.webp",
+      "caption": "",
+      "page": 6,
+      "index": 9,
+      "width": 793,
+      "height": 898
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-010.webp",
+      "caption": "",
+      "page": 6,
+      "index": 10,
+      "width": 588,
+      "height": 542
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-011.webp",
+      "caption": "",
+      "page": 6,
+      "index": 11,
+      "width": 676,
+      "height": 531
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-012.webp",
+      "caption": "",
+      "page": 6,
+      "index": 12,
+      "width": 528,
+      "height": 464
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-013.webp",
+      "caption": "",
+      "page": 6,
+      "index": 13,
+      "width": 381,
+      "height": 357
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-014.webp",
+      "caption": "",
+      "page": 6,
+      "index": 14,
+      "width": 395,
+      "height": 341
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-015.webp",
+      "caption": "",
+      "page": 6,
+      "index": 15,
+      "width": 377,
+      "height": 353
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-016.webp",
+      "caption": "",
+      "page": 6,
+      "index": 16,
+      "width": 442,
+      "height": 325
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-017.webp",
+      "caption": "",
+      "page": 6,
+      "index": 17,
+      "width": 732,
+      "height": 681
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-018.webp",
+      "caption": "",
+      "page": 6,
+      "index": 18,
+      "width": 653,
+      "height": 686
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-019.webp",
+      "caption": "",
+      "page": 6,
+      "index": 19,
+      "width": 612,
+      "height": 612
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-020.webp",
+      "caption": "",
+      "page": 6,
+      "index": 20,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-021.webp",
+      "caption": "",
+      "page": 6,
+      "index": 21,
+      "width": 1280,
+      "height": 1280
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-022.webp",
+      "caption": "",
+      "page": 6,
+      "index": 22,
+      "width": 1280,
+      "height": 1280
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-023.webp",
+      "caption": "",
+      "page": 6,
+      "index": 23,
+      "width": 422,
+      "height": 346
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-024.webp",
+      "caption": "",
+      "page": 6,
+      "index": 24,
+      "width": 443,
+      "height": 279
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-025.webp",
+      "caption": "",
+      "page": 6,
+      "index": 25,
+      "width": 769,
+      "height": 594
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-026.webp",
+      "caption": "",
+      "page": 6,
+      "index": 26,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-027.webp",
+      "caption": "",
+      "page": 6,
+      "index": 27,
+      "width": 853,
+      "height": 754
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-028.webp",
+      "caption": "",
+      "page": 6,
+      "index": 28,
+      "width": 1082,
+      "height": 950
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-029.webp",
+      "caption": "",
+      "page": 6,
+      "index": 29,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-030.webp",
+      "caption": "",
+      "page": 6,
+      "index": 30,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-031.webp",
+      "caption": "",
+      "page": 6,
+      "index": 31,
+      "width": 772,
+      "height": 575
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-032.webp",
+      "caption": "",
+      "page": 6,
+      "index": 32,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-033.webp",
+      "caption": "",
+      "page": 8,
+      "index": 33,
+      "width": 8342,
+      "height": 3778
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-034.webp",
+      "caption": "",
+      "page": 9,
+      "index": 34,
+      "width": 2344,
+      "height": 1751
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-035.webp",
+      "caption": "",
+      "page": 9,
+      "index": 35,
+      "width": 2343,
+      "height": 1751
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-036.webp",
+      "caption": "",
+      "page": 14,
+      "index": 36,
+      "width": 1560,
+      "height": 1310
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-037.webp",
+      "caption": "",
+      "page": 16,
+      "index": 37,
+      "width": 2100,
+      "height": 900
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-038.webp",
+      "caption": "",
+      "page": 16,
+      "index": 38,
+      "width": 1500,
+      "height": 1200
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-039.webp",
+      "caption": "",
+      "page": 18,
+      "index": 39,
+      "width": 1634,
+      "height": 1456
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-040.webp",
+      "caption": "",
+      "page": 19,
+      "index": 40,
+      "width": 2400,
+      "height": 1800
+    },
+    {
+      "url": "assets/figures/acl-2026-long/anthology-2026acl-long1556/fig-041.webp",
+      "caption": "",
+      "page": 19,
+      "index": 41,
+      "width": 2400,
+      "height": 1800
+    }
+  ]
+}

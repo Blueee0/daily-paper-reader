@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/acl-2026-findings/anthology-2026findings-acl2090/fig-001.webp",
+      "caption": "",
+      "page": 3,
+      "index": 1,
+      "width": 3836,
+      "height": 1764
+    }
+  ]
+}

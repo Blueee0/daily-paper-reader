@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-001.webp",
+      "caption": "",
+      "page": 1,
+      "index": 1,
+      "width": 532,
+      "height": 394
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-002.webp",
+      "caption": "",
+      "page": 1,
+      "index": 2,
+      "width": 440,
+      "height": 482
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-003.webp",
+      "caption": "",
+      "page": 1,
+      "index": 3,
+      "width": 402,
+      "height": 504
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-004.webp",
+      "caption": "",
+      "page": 1,
+      "index": 4,
+      "width": 531,
+      "height": 800
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-005.webp",
+      "caption": "",
+      "page": 3,
+      "index": 5,
+      "width": 692,
+      "height": 1112
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-006.webp",
+      "caption": "",
+      "page": 3,
+      "index": 6,
+      "width": 592,
+      "height": 768
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-007.webp",
+      "caption": "",
+      "page": 3,
+      "index": 7,
+      "width": 600,
+      "height": 800
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-008.webp",
+      "caption": "",
+      "page": 3,
+      "index": 8,
+      "width": 531,
+      "height": 800
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-009.webp",
+      "caption": "",
+      "page": 4,
+      "index": 9,
+      "width": 342,
+      "height": 506
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-010.webp",
+      "caption": "",
+      "page": 4,
+      "index": 10,
+      "width": 1200,
+      "height": 712
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-011.webp",
+      "caption": "",
+      "page": 4,
+      "index": 11,
+      "width": 1200,
+      "height": 773
+    },
+    {
+      "url": "assets/figures/cvpr-2026-accepted/cvpr-2026-wu-refact-empowering-multimodal-web-agents-with-visual-and-context-focusing-cvpr-2026-paper/fig-012.webp",
+      "caption": "",
+      "page": 4,
+      "index": 12,
+      "width": 1200,
+      "height": 775
+    }
+  ]
+}

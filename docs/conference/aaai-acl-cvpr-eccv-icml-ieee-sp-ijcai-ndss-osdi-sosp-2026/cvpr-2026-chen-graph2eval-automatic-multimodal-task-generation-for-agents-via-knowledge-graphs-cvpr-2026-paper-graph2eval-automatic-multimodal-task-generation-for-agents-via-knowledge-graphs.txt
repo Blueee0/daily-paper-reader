@@ -1,0 +1,425 @@
+Title: Graph2Eval: Automatic Multimodal Task Generation for Agents via Knowledge Graphs
+
+URL Source: https://openaccess.thecvf.com/content/CVPR2026/papers/Chen_Graph2Eval_Automatic_Multimodal_Task_Generation_for_Agents_via_Knowledge_Graphs_CVPR_2026_paper.pdf
+
+Published Time: Sat, 16 May 2026 16:46:11 GMT
+
+Number of Pages: 10
+
+Markdown Content:
+# Graph2Eval: Automatic Multimodal Task Generation for Agents via Knowledge Graphs 
+
+## Yurun Chen 1 Xueyu Hu 1 Yuhan Liu 2 Ziqi Wang 1 Zeyi Liao 3 Lin Chen 4
+
+## Feng Wei 4 Yuxi Qian 4 Bo Zheng 4 Keting Yin 1,* Shengyu Zhang 1,5,* 1Zhejiang University 2Xiameng University 3The Ohio State University 4Ant Group  
+
+> 5
+
+## Shanghai Institute for Advanced Study, Zhejiang University Project Page: https://github.com/YurunChen/Graph2Eval 
+
+## Abstract 
+
+As multimodal LLM-driven agents advance in autonomy and generalization, traditional static datasets face inher-ent scalability limitations and are insufficient for fully as-sessing their capabilities in increasingly complex and di-verse tasks. Existing studies have attempted to generate agent tasks using LLMs, but due to the inherent halluci-nations of LLMs and the lack of internal data relationship modeling, these tasks often exhibit semantic inconsistencies and solvability issues. To address these challenges, we in-troduce GRAPH 2E VAL , a knowledge-graph-driven frame-work for automated, scalable, and semantically grounded agent task generation. At its core, GRAPH 2E VAL lever-ages a knowledge graph built from heterogeneous external data sources as a structured task space, generating mul-timodal agent tasks through subgraph sampling and task construction guided by task templates and meta-path strate-gies. To further ensure task reliability, a multi-stage filter-ing pipeline based on node reachability analysis, LLM scor-ing, and similarity analysis ensures the diversity and solv-ability of the generated tasks. By unifying both RAG Agent and Web Agent scenarios, GRAPH 2E VAL enables efficient generation of multimodal document understanding tasks and multi-step web interaction tasks. We instantiate the framework with GRAPH 2E VAL -B ENCH , a curated dataset of 1,319 tasks spanning document understanding and web interaction scenarios. Extensive experiments show that, on average, GRAPH 2E VAL improves task semantic consis-tency by 20% and solvability by 17% over baselines, while 
+
+GRAPH 2E VAL -B ENCH effectively distinguishes agent per-formance, offering a new perspective on agent evaluation. 
+
+## 1. Introduction 
+
+A static and narrow evaluation framework risks mistaking surface-level familiarity for true cognitive ability. In a sim-
+
+> *Corresponding Author
+
+plified analogy, repeatedly presenting the same fixed set of exercises may allow a person to memorize answers and ap-pear to perform perfectly, while their true adaptability re-mains untested. The same concern arises for multimodal LLM-based agents: While large-scale pretraining on foun-dation models and domain-specific finetuning have substan-tially advanced agent performance [4, 6, 12, 21, 22], ex-isting static datasets fail to disentangle whether an agent’s task success reflects genuine generalization or mere re-trieval of memorized knowledge, thereby undermining the assessment of true competence. Therefore, success on static datasets does not imply that an agent can generalize or re-main reliable in real-world scenarios. Rapidly expanding and updating datasets could reduce evaluation bias from agents’ reliance on internal training knowledge, yet most current datasets offer limited sup-port for such dynamic capabilities. Construction of static datasets remains heavily dependent on manual annotation or reuse of prior resources [5, 8, 19, 23, 37, 42], and online environment datasets [3, 10, 14, 17, 33, 38, 49] also demand substantial human effort to expand tasks, such as build-ing controlled environments and designing content-specific challenges. These constraints limit task diversity and align-ment with dynamic environments, motivating the develop-ment of automated agent task generation methods to allevi-ate such labor-intensive bottlenecks [16, 29, 31, 48]. How-ever, these methods face two major limitations: (I) Absence of explicit entity-relation modeling : Current methods gen-erally rely on preprocessed text and image data, which are directly analyzed by LLMs for task generation, without ex-plicitly modeling the semantic structure among entities. As a result, the generated tasks often suffer from semantic in-consistency and limited solvability, and fail to capture the complex interdependencies required for higher-order rea-soning and cognitive evaluation. (II) Limited adaptation to dynamic environments : Current methods for generat-ing web interaction tasks rely on static data with predefined This CVPR paper is the Open Access version, provided by the Computer Vision Foundation. Except for this watermark, it is identical to the accepted version; the final published version of the proceedings is available on IEEE Xplore. 735 GPT-4o GPT-4.1 mini Qwen-2.5-VL-72B Qwen-2.5-VL-32B Qwen-2.5-VL-7B DeepSeek-V3 DeepSeek-V3.1    
+
+> Overall Score  0.785 0.820
+> 0.709
+> 0.481 0.543
+> 0.835 0.782
+
+Single Agent (RAG)    
+
+> GPT-4o GPT-4.1 mini Qwen-2.5-VL-72B Qwen-2.5-VL-32B Qwen-2.5-VL-7B DeepSeek-V3 DeepSeek-V3.1
+> 0.762 0.697 0.700
+> 0.501
+> 0.697
+> 0.798 0.787
+
+Multi-Agent (RAG)     
+
+> Gemini 2.5 Flash GPT-4o mini Qwen-2.5-VL-72B Qwen-2.5-VL-32B Qwen-2.5-VL-7B UI-TARS-1.5-7B
+> 0.145 0.095 0.139
+> 0.028 0.006 0.049
+
+SoM Agent (Web)    
+
+> Gemini 2.5 Flash GPT-4o mini Qwen-2.5-VL-72B Qwen-2.5-VL-32B Qwen-2.5-VL-7B UI-TARS-1.5-7B
+> 0.692
+> 0.331 0.388
+> 0.151 0.117 0.072
+
+Agent S 2.5 (Web) Figure 1. G RAPH 2E VAL -B ENCH supports evaluating agent performance across different foundation models. 
+
+page relationships or on LLMs analyzing simplified envi-ronments, and fail to explore effective modeling of content and page relationships in real-world websites. As a result, the generated tasks are difficult to transfer to dynamic web scenarios, preventing reliable evaluation of agents’ general-ization and performance in real-world environments. To address these gaps, we propose GRAPH 2E VAL , a Knowledge Graph (KG)-based framework for automatic agent task generation that ensures semantic consistency and task solvability. In this framework, the KG serves as the 
+
+task space for task generation, enabling the creation of doc-ument understanding and web interaction tasks. Specifi-cally, G RAPH 2E VAL employs a unified graph abstraction to encode entities, relations, and interactions from textual and web data as nodes and edges representing both semantic and interactive elements. Building on this graph, G RAPH 2E VAL 
+
+defines task structures using task templates and meta-paths, which specify the types and order of nodes in a task and guide structured task generation. Subgraph sampling strate-gies are then applied to extract the required nodes and edges. Subsequently, LLMs integrate the sampled subgraph structures with contextual information via context engineer-ing, generating diverse and well-formed task instances. We implemented a prototype of G RAPH 2E VAL and constructed G RAPH 2E VAL -B ENCH , a dataset containing 1,319 diverse tasks, including 1,002 document understand-ing tasks and 317 web interaction tasks, which is designed to evaluate both Retrieval-Augmented Generation (RAG) Agents and Web Agents. Extensive experiments demon-strate that, compared to a KG-free baseline, tasks gener-ated by G RAPH 2E VAL achieve semantic consistency and solvability improvements of 20% and 17% on average. In addition, G RAPH 2E VAL achieves high efficiency, requiring on average 34.87 seconds per document understanding task and 95.51 seconds per web interaction task. Furthermore, GRAPH 2E VAL -B ENCH effectively distinguishes agent per-formance across different LLM configurations (Figure 1). Our contributions are summarized as follows: • We propose a novel perspective for agent task generation by treating KGs constructed from multi-source data as a latent task space, aiming to improve semantic consistency and solvability in synthetic agent tasks. • We introduce G RAPH 2E VAL , a KG–based framework that exploits semantic relations within data for automatic agent task generation, providing a unified pipeline for rapid dataset creation in a reproducible manner. • We implement a full prototype of G RAPH 2E VAL and con-struct G RAPH 2E VAL -B ENCH , a dataset of 1,319 agent tasks designed for evaluating both RAG Agents and Web Agents. Extensive experiments show that the frame-work efficiently generates diverse tasks, improves seman-tic consistency and solvability, and effectively differenti-ates performance across various agents. 
+
+## 2. Background 
+
+This section highlights the limitations of existing datasets in terms of scalability, semantic consistency, and support for dynamic scenario tasks for agents. 
+
+Human-Annotated Data. Most existing evaluation benchmarks rely on human annotation. In the LLM era, datasets [9, 20, 28, 35] mainly focus on static task evalua-tion. As research shifts toward tool-using [24, 36, 44] and web agents, new agent-oriented benchmarks have emerged, including GAIA [23], MiniWob [30], MiniWoB++ [18], and Mind2Web [8], most of which are manually con-structed. Some benchmarks further incorporate realistic environments, such as OS World [39], AndroidWorld [27], RedTeamCuA [17], WASP [10], SafeArena [33], ST-WebAgentBench [14], and DoomArena [3]. Despite richer environments, their task specifications remain predominantly human-defined, limiting scalability. 
+
+Synthetic Data. Some approaches leverage LLMs to syn-thesize inputs in various ways, including seed-task-based 736 generation [15, 32, 34, 40], question rewriting [45], and self-iterative methods [25, 47]. Additionally, other methods enhance instruction complexity through rule-based modi-fications [41] or extract question-answer pairs from web-pretrained corpora to construct training data [46]. However, these synthetic data generation techniques primarily focus on training or evaluating LLMs rather than on agent-centric tasks. TaskCraft [29] automates the construction of tool-using agent tasks by first generating atomic tasks via LLM-based document traversal, and then expanding the task space through task composition. Nevertheless, this com-positional approach still relies on the LLM’s judgment of inter-task dependencies and lacks an effective understand-ing of explicit entity relationships. Similarly, Su et al. [31] synthesize agent-environment interaction data from docu-ments using LLMs, but the quality of the generated tasks is ensured only through deduplication and LLM-based align-ment and evaluation. Moreover, since this method generates web agent tasks based on static documents, it lacks an un-derstanding of tasks in actual dynamic scenarios and there-fore cannot reliably assess task executability. 
+
+## 3. G RAPH 2E VAL 
+
+GRAPH 2E VAL aims to provide an efficient task genera-tion framework that addresses challenges in task semantic alignment and solvability in existing agent task generation methods. GRAPH 2E VAL is characterized by two key fea-tures: (1) Knowledge-Graph–Driven Task Space : Tasks are generated based on a structured knowledge graph con-structed from multi-source external data, capturing entities and their semantic relationships to ensure consistent and ex-ecutable task generation. (2) Multi-Scenario Task Gener-ation : G RAPH 2E VAL extracts entities and their dependen-cies from documents to generate document understanding tasks for RAG Agents, and produces web interaction tasks for Web Agents that reflect realistic deployment scenar-ios. The dataset generation workflow comprises five stages: 
+
+data ingestion → KG construction → subgraph sampling 
+
+→ task generation → coverage optimization , as illustrated in Figure 2. 
+
+3.1. Data Ingestion 
+
+During preprocessing, G RAPH 2E VAL structures document content beyond plain text by preserving hierarchical seman-tics and layout elements such as paragraphs, tables, head-ings, and figure captions. This involves three key steps: (1) Semantic Chunking , segmenting the document into min-imal semantic units mapped to graph nodes; (2) Embed-ding Computation , encoding each node with deep seman-tic embeddings to capture contextual dependencies; and (3) Metadata Annotation , enriching nodes with source and positional metadata ( e.g. , file path, title, author). This con-tent → node → embedding + metadata representation en-sures semantic fidelity and cross-document consistency, en-abling KG construction and task generation. For web data, pages are collected via automated URL crawling, extract-ing DoM structures and screenshots. To handle complex modern web designs, we integrate simulated human-like in-teractions to navigate pages. Collection quality is further improved through filtering strategies combining rule-based heuristics and LLM-based evaluation, effectively pruning low-quality links while increasing information density. Ad-ditional safety constraints are enforced to prevent the collec-tion of sensitive or restricted information, as detailed further in Appendix A. 
+
+3.2. KG Construction 
+
+We construct a KG to transform unstructured and semi-structured content into a computable, reasoning-friendly semantic space. Formally, we define the KG as G =(V, E, R ), where V is the set of nodes, E is the set of edges, and R is the set of relation types. 
+
+Node Extraction. Nodes are extracted by parsing a docu-ment or webpage D to identify elements such as paragraphs, headings, hyperlinks, forms, buttons, and table cells. Each element is mapped to a node: 
+
+V = {vi | vi ∈ Elements (D), type (vi) ∈ NodeTypeSet },
+
+where NodeTypeSet includes Paragraph, Heading, Hyper-link, Form, Button, Table, and other domain-specific ele-ments. The contextual path Path (vi) is preserved to main-tain the DoM hierarchy or document structure. 
+
+Node Representation. Each node vi contains textual con-tent cTi (e.g. , text, captions, alt text) and visual content cVi
+
+(e.g. , images, screenshots). Visual content is first converted to textual descriptions using a function ϕvisual :
+
+cT +Vi = cTi || ϕvisual (cVi ),
+
+where || denotes text concatenation. The combined textual representation is then embedded into a vector space: 
+
+hi = fembed (cT +Vi ), fembed : Text → Rd,
+
+where d is the embedding dimension ( e.g. , d = 384 for all-MiniLM-L6-v2). The resulting vector hi is stored in a vector database Dvec for efficient semantic search and simi-larity matching. 
+
+Edge Construction. Relations between nodes are cap-tured as a heterogeneous edge set: 
+
+E = Etext ∪ Eweb , E ⊆ V × V × R, 
+
+where Etext encodes text-based relationships, including structural relations ( e.g. , sequence, contains), semantic as-sociations ( e.g. , entity relations, semantic similarity), con-textual relations ( e.g. , figure or table context), and reference 737 Paragraph name 
+
+> Place Title
+
+Parse & Clean External files Figure Table 
+
+File Chunk 
+
+Structured DoM Info SoM Page Screenshot Collect    
+
+> Breadth-first search
+> 1⃣ Filter Page
+> 2⃣ Evaluating Content
+> 3⃣ Evaluating Links
+> Page Evaluation
+> Depth 1 Depth 2 Depth 3
+
+Meta info 
+
+Organize & combine 
+
+# … … 
+
+Knowledge Graph 
+
+> Contains
+
+Page Link Web Node Text Text  
+
+> sequence Nav To
+
+Page Page Text Image 
+
+> Figure Context
+
+Text Node 
+
+# … … Obtain Subgraph Sampling Strategy 
+
+> 1. motif_based 2. centrality_based 3. semantic_based 4. context_chain_based 5. hybrid
+> 1. element_centric 2. relation_centric 3. goal_conditioned 4. hybrid
+
+Doc Task Web Task 
+
+> High value element
+
+Doc Parsing Web Parsing Knowledge Graph Construction Subgraph Sampling 
+
+Coverage Optimization 
+
+> (c) Task Alignment Check (d) Accessibility Check (e) Task Novelty
+> MMR Novelty
+> Subgraph Jaccard
+> Step Similarity
+> LLM Semantic
+> 1. Role Definition 2. Difficulty Requirements 3. Quality requirements 4. Subgraph elements
+
+Context Engineering 
+
+> 1. Role Definition 2. Meta-path Type 3. Website Type 4. Difficulty Requirements 5. Quality requirements 6. Subgraph elements
+
+Context Engineering WorkFlow 
+
+> (1) Subgraph sampling (2) Task template selected (3) Variable Extraction (4) Context Engineering (5) LLM Generation
+> Navigation($nav)
+> Button($btn)
+> Meta-path regex matching
+> Page($page)
+> Content($content)
+
+Task Generation 
+
+Doc Task Web Task 
+
+> (M)LLM Generate Task
+> [Contains] [NavTo] [Contains]
+> (M)LLM Generate Web Task
+
+WorkFlow   
+
+> (1) Task seeds selected (2) Subgraph sampling (3) Meta-path selected (4) Context Engineering (5) LLM Generation Subgraph Sampling Subgraph Sampling Task templates 1. Comprehension 2. Extraction 3. Comparison 4. Summarization …… Variable Extraction
+> Semantic Analysis Graph Analysis LLM Analysis
+> Task Seed Search Filtering nav btn page content Extract Variables
+> (a) Task Quality Check
+> Quality Score
+> Task Step
+> Prompt Length
+> Path Accessibility
+> Element visibility
+
+Figure 2. Workflow for dataset generation in G RAPH 2E VAL : (1) Data Ingestion ( Top Left / Right ): parsing documents and crawling web pages to extract structured content. (2) KG Construction ( Middle Left ): building the graph by identifying nodes and edges that encode semantic, structural, and interactive relations. (3) Subgraph Sampling ( Middle Right ): applying scenario-specific sampling strategies for document and web tasks based on execution modes. (4) Task Generation ( Bottom Left ): instantiating and composing tasks from sampled subgraphs, producing diverse, executable task units. (5) Coverage Optimization ( Bottom Right ): evaluating and selecting generated tasks to ensure quality, diversity, and representativeness. 
+
+relations ( e.g. , co-reference, cross-document links). Eweb 
+
+models web-specific interactions, such as navigation rela-tions ( e.g. , page navigation, form submission), interaction relations ( e.g. , click triggers), and layout relations ( e.g. , vi-sual layout or data flow). 
+
+3.3. Subgraph Sampling 
+
+In the subgraph sampling stage, given a task objec-tive g, G RAPH 2E VAL extracts a local subgraph Gg =(Vg , E g , R ) ⊆ G by selecting relevant nodes and their in-terconnections. 
+
+Scenario-Specific Sampling. The subgraph sampling follows different strategies depending on the scenario: 
+
+(1) Document Comprehension: Nodes include Docu-mentElementNode (paragraph, heading, table, image), Enti-tyNode (person, location, organization), and SemanticChun-kNode , capturing both semantic content and structural roles. Sampling prioritizes semantic relevance (via embeddings) and structural coherence (via StructM atch ). Only nodes of the relevant types are included. (2) Web Interaction: 
+
+Sampling follows a seed-driven strategy. First, task-specific seed nodes Sseed (g) (buttons, forms, navigation links) are identified. Second, the k-hop neighbors of each seed node are collected, including valid WebPageNode and WebEle-mentNode entities. This ensures that the local interaction context is captured around the seeds. 
+
+Sampling Workflow. We present the workflow of sub-graph sampling in Algorithm 1. For notation, the KG is denoted as G = (V, E, R ), and the extracted subgraph is Gg = (Vg , E g , R ), where Vg ⊆ V and Eg ⊆ E.The task objective is g, which is mapped to an embed-ding hg using the same embedding function fembed (·) used for nodes. Each node vi is similarly represented by its embedding hi. In the document mode, τ denotes the co-sine similarity threshold for node relevance ( cos( hi, h g )), and StructM atch (·) is the function for checking structural alignment. In the web mode, Sseed (g) represents the set of task-specific seed nodes, and k is the neighborhood hop 738 Algorithm 1: Workflow of Subgraph Sampling                                                                                                       
+
+> Input: KG G= ( V, E, R ), task objective g, mode
+> m∈ { document ,web },threshold τ(document), neighborhood k(web), seed nodes Sseed (g)(web)
+> Output: Sampled subgraph Gg= ( Vg, E g, R )
+> 1Vg← ∅ ,Eg← ∅
+> 2foreach vi∈Vdo
+> /* Evaluate node vibased on current mode (document or web) */
+> 3if m=document then
+> 4hi←EMBEDDING (vi)
+> 5if cos( hi, h g)> τ or StructMatch (vi, g ) = 1
+> then
+> 6if vi∈N odeT ypeSet then
+> 7Vg←Vg∪ { vi}
+> 8if m=web then
+> 9if vi∈Sseed (g)then
+> 10 Vg←Vg∪ { vi}
+> 11 Ni←NEIGHBOR (vi, k )
+> 12 foreach vj∈Nido
+> 13 if vj∈W ebN odeSet then
+> 14 Vg←Vg∪ { vj}
+> 15 Eg← { (vi, v j)∈E|vi, v j∈Vg}
+> /* Final subgraph Ggcontains selected nodes and their interconnections */
+> 16 return Gg= ( Vg, E g, R )
+
+distance for collecting context (via N EIGHBOR (·)). Node sets are further constrained by N odeT ypeSet (document) or W ebN odeSet (web) filters. 
+
+3.4. Task Generation 
+
+In G RAPH 2E VAL , we use subgraphs from KGs to generate tasks. Each subgraph is transformed into an executable and evaluable task, yielding two task types: document under-standing and web interaction. 
+
+Document Understanding. For document understanding tasks, the generation pipeline of G RAPH 2E VAL consists of four stages: (1) Task Templates : We maintain a library of task templates that cover fundamental categories such as question answering, comparison, analysis, and reason-ing (see Appendix B for details). (2) Subgraph Sam-pling : GRAPH 2E VAL performs subgraph sampling from the KG to select subgraphs that satisfy the constraints im-posed by the task template. The sampled subgraph must meet template-specified requirements, including mandatory node and edge types, node count ranges, and maximum hop distance. By adjusting subgraph size, edge types, and sampling strategies, the framework can flexibly control task complexity and reasoning depth. (3) Variable Extraction :From the sampled subgraph, G RAPH 2E VAL extracts tem-plate variables such as node contents, edge relations, con-textual information, and metadata, which serve as necessary inputs for task generation. (4) Task Generation : Given the subgraph, G RAPH 2E VAL combines the structural con-tent with the template-defined context, and further leverages LLMs to generate concrete task instances. 
+
+Web Interaction. For web interaction tasks, we pro-pose a Seed-Driven Subgraph Sampling Strategy , which consists of four stages: (1) Task Seed Identification :GRAPH 2E VAL first parses the page to identify key opera-tional nodes ( e.g. , buttons, input boxes, forms, navigation links) as “task seeds,” thereby anchoring task execution to actual page functionality. (2) Subgraph Sampling : Based on these seeds, relevant contextual nodes and interaction edges are sampled from the KG to construct a subgraph. (3) Meta-path Matching : Meta-path patterns are then applied to match and extend the subgraph, producing concrete task chains. Details of the meta-path design and implementation are provided in the Appendix C. (4) Dynamic Task Gen-eration : Once the subgraph and task chain are obtained, LLMs generate concrete task instances by combining the subgraph structure, meta-paths, and page context informa-tion ( e.g. , screenshots and element lists processed by the Set of Marks). For example, if only a search box, submit but-ton, and result items are detected, the task chain becomes 
+
+Search + Detail ; if a filter is also present, the chain becomes 
+
+Search + Filter + Detail . The seed → subgraph sampling 
+
+→ meta-path matching pipeline drives task generation with contextual relevance, enables multi-hop and branching flex-ibility through diverse sampling strategies, and offers con-trollability via seed selection and meta-path design. This compositional mechanism avoids rigid all-or-nothing con-straints. 
+
+> Highlights
+
+The divergence between doc tasks and web tasks stems from their execution paradigms: doc tasks require an agent to perform a limited number of API calls within a few dialogue turns, whereas web tasks involve sequential, multi-step interac-tions within dynamic web environments, thereby necessitating distinct generation strategies. 
+
+3.5. Coverage Optimization 
+
+We use a multi-stage optimization framework to ensure the quality, diversity, and representativeness of generated tasks. For web interaction tasks, candidate tasks are first filtered using either LLM-based or rule-based quality scores, and coverage is quantified across node type, edge type, pattern, page-level, website type, and difficulty dimensions. Nov-elty is measured via multi-level similarity, and tasks are 739 iteratively selected using a Maximal Marginal Relevance (MMR)–based strategy. For document understanding tasks, coverage emphasizes semantic diversity across task type, difficulty, template, variable, and content length, with nov-elty assessed via LLM-based semantic similarity and selec-tion also guided by MMR. 
+
+## 4. Experiments 
+
+This section presents experiments on G RAPH 2E VAL and GRAPH 2E VAL -B ENCH , evaluating task semantic consis-tency, solvability, and discriminative ability. Limitations of GRAPH 2E VAL are discussed in Appendix D. 
+
+4.1. Implementation Details 
+
+Agents. We evaluate GRAPH 2E VAL on two types of agents: RAG Agents and Web Agents. The RAG Agents include both Single Agent and Multi-Agent setups for doc-ument understanding, with the Multi-Agent architecture comprising a planner, retriever, reasoner, verifier, and sum-marizer. Web Agents are responsible for multi-step web in-teractions, including the Set-of-Marks (SoM) Agent [43], which leverages SoM-annotated images to provide richer multimodal context, and Agent S 2.5 [1], which incorpo-rates task-aligned reflection and memory management to enhance reasoning. Detailed agent architectures are pro-vided in Appendix E. 
+
+Models & Baselines. Task generation and optimiza-tion are based on GPT-4o [13] and we evaluate multiple model families: GPT Series [13] (GPT-4o ,
+
+GPT-4o mini , GPT-4.1 mini ), Deepseek Se-ries [11] (Deepseek-V3 , Deepseek-V3.1 ), Qwen Series [2] (Qwen2.5-VL-7B , Qwen2.5-VL-32B ,
+
+Qwen2.5-VL-72B ), and Gemini Series [7] ( Gemini 2.5 Flash ), as well as the GUI understanding model 
+
+UI-TARS-1.5-7B [26]. All models use a temperature of 0.1, with all-MiniLM-L6-v2 embeddings for graph construction. In addition, we compare G RAPH 2E VAL 
+
+with the KG-free variant, as well as with OSWorld [38], MMBench [20], and TaskCraft [29], to evaluate differences across task generation strategies. 
+
+Metrics. We evaluate document understanding tasks us-ing three metrics: (1) F1 , (2) ROUGE-L , and (3) LLM-as-a-Judge (abbreviated as LLM Judge ), capturing performance at both the rule-based and semantic understanding levels. For web tasks, success is measured by the Success Rate (SR), defined as the proportion of tasks judged success-fully completed by an LLM evaluator. The reliability of this metric was validated against human annotations (Appendix F.3). Additionally, we define metrics for task quality as fol-lows: (1) Consistency , measuring the proportion of tasks whose content is semantically aligned with the source data, and (2) Solvability , measuring the proportion of tasks that can be successfully completed given the provided context. Detailed formulas are provided in the Appendix F. 20 40        
+
+> Time (s) 22.01 Graph Construction
+> 010 7.81 Subgraph Sampling
+> 30 40 34.87 Per Task Generation
+> 15 20 25
+> Time (s) 18.65 24
+> 1.78
+> 50 100 95.51
+> Document Data Web Data Average
+> Figure 3. Comparison of G RAPH 2E VAL Processing Time on Doc-ument and Web Data.
+
+4.2. Main Results 
+
+Dataset Construction. The details about G RAPH 2E VAL -BENCH are presented in Table 1. For document understand-ing tasks, high-quality papers were collected as the data source, while Web interaction tasks drew data from various websites, including screenshots and DOM structures. To validate the constructed graph, we randomly sampled 100 node pairs from both data sources and manually verified the correctness of nodes and edges, with the high KG Edge Pre-cision confirming the graph’s reliability. Furthermore, Fig-ure 3 shows that G RAPH 2E VAL requires substantially less time for task generation compared to manual construction. A detailed dataset composition is provided in Appendix G. 
+
+> Table 1. Statistics of G RAPH 2E VAL -B ENCH .
+
+Metric Value (Average) 
+
+Documents / Websites 16 / 8 Tasks (Doc / Web) 1002 / 317 Tasks per document / website 83.5 / 48.4 Task types (Doc / Web) 12 / 7 KG Edge Precision 88% 
+
+Analysis of Document Understanding Tasks. We eval-uated G RAPH 2E VAL -B ENCH under both single agent and multi-agent collaboration settings, with results in Table 2. We tested both multimodal LLMs and textual LLMs (in text mode, G RAPH 2E VAL converts figure interpretation tasks into text-based reasoning tasks by extracting image meta-data, including titles, captions, alt text, and OCR-extracted text). Overall, GPT-4o achieves the highest F1 and 
+
+ROUGE-L scores, while its performance under LLM-as-a-740 Table 2. Performance comparison of models under single agent and multi-agent evaluation settings. Best and second-best values are bolded 
+
+and underlined, respectively. 
+
+Model Single Agent Multi-Agent 
+
+F1 Rouge-L LLM Judge Avg. Token F1 Rouge-L LLM Judge Avg. Token 
+
+Multimodal Model 
+
+GPT-4o 0.5766 0.4874 0.7854 1631.82 0.5916 0.4873 0.7623 3560.92 
+
+GPT-4.1 mini 0.4202 0.4202 0.8202 3593.13 0.3496 0.3068 0.6972 4679.13 
+
+Qwen2.5-VL-72B 0.5730 0.4837 0.7094 2394.19 0.5673 0.4711 0.6999 3855.65 
+
+Qwen2.5-VL-32B 0.3677 0.3300 0.4811 2275.01 0.4341 0.3813 0.5008 3779.32 
+
+Qwen2.5-VL-7B 0.2093 0.1939 0.5427 2455.17 0.3496 0.2548 0.6973 3732.27 
+
+Textual Model 
+
+Deepseek-V3 0.5376 0.4518 0.8351 1710.65 0.5497 0.4635 0.7984 3462.88 
+
+Deepseek-V3.1 0.5276 0.4329 0.7816 1777.98 0.5141 0.4253 0.7875 3435.12 
+
+Table 3. Performance comparison of various models under SoM Agent and Agent S 2.5 evaluation settings. Performance is measured as SR 
+
+of tasks. Best and second-best values are bolded and underlined, respectively. 
+
+Model Basic Nav. Toast Cont. Search Modal Buss. Navi. Button Overall SoM Agent 
+
+Gemini 2.5 Flash 0.1778 0.0000 0.2000 0.1134 0.0000 0.2500 0.1875 0.1451 
+
+GPT-4o mini 0.0667 0.0000 0.0000 0.1237 0.0000 0.0750 0.0000 0.0946 
+
+Qwen2.5-VL-72B 0.1333 1.0000 0.2000 0.1031 0.1666 0.2750 0.1250 0.1388 
+
+Qwen2.5-VL-32B 0.0222 1.0000 0.0667 0.0155 0.0000 0.0750 0.0000 0.0283 
+
+Qwen2.5-VL-7B 0.0000 0.0000 0.0000 0.0103 0.0000 0.0000 0.0000 0.0063 
+
+UI-TARS-1.5-7B 0.0667 0.0000 0.0000 0.0773 0.0000 0.0750 0.1250 0.0491 
+
+Agent S 2.5 
+
+Gemini 2.5 Flash 0.4889 1.0000 0.6667 0.6340 1.0000 0.5500 0.6250 0.6920 
+
+GPT-4o mini 0.3334 0.0000 0.2000 0.3763 0.5000 0.1750 0.2500 0.3312 
+
+Qwen2.5-VL-72B 0.3334 1.0000 0.2667 0.4278 0.8333 0.1500 0.5625 0.3880 
+
+Qwen2.5-VL-32B 0.1778 0.0000 0.2000 0.1546 0.3333 0.0750 0.1250 0.1514 
+
+Qwen2.5-VL-7B 0.1112 0.0000 0.0666 0.1392 0.1667 0.0750 0.0000 0.1167 
+
+UI-TARS-1.5-7B 0.0889 0.0000 0.0667 0.0979 0.0000 0.1250 0.1250 0.0719 
+
+Judge ranks second. On the other hand, Deepseek-V3 
+
+performs best in the LLM-as-a-Judge .
+
+Analysis of Web Interaction Tasks. We evaluated the web interaction tasks in the G RAPH 2E VAL -B ENCH using SoM Agent and Agent S 2.5, with the results presented in Table 3. Overall, Agent S 2.5 consistently outperforms SoM Agent across nearly all task types. On Gemini 2.5 Flash , both agents achieved their best overall per-formance, with SoM Agent reaching 14.51% and Agent S 2.5 achieving 69.20%, demonstrating a clear performance gap. The open-source model Qwen2.5-VL-72B also achieved strong results, ranking as the second-best over-all. By contrast, GPT-4o mini showed competitive per-formance on specific tasks ( e.g. , business navigation and modal interaction), but its overall effectiveness remained limited. The relatively low scores of Qwen2.5-VL-32B ,
+
+Qwen2.5-VL-7B , and UI-TARS-1.5-7B demonstrate that the benchmark effectively distinguishes performance differences across models of varying scales. A detailed case study is provided in Appendix H. 
+
+> Findings
+
+The performance gap between Agent S 2.5 and SoM Agent shows that our tasks emphasize multi-step reasoning rather than simple visual grounding, effectively assessing the advanced reasoning, reflection, and memory capabilities present in Agent S 2.5 but absent in SoM Agent. 741 4.3. Ablation Studies 
+
+To evaluate the role of the KG as the task space on the qual-ity of generated tasks, we compare G RAPH 2E VAL with a KG-free variant that generates tasks directly from processed documents and web data. Both methods produce 1000 tasks using the same data set with GPT-4o (500 document under-standing tasks and 500 web interaction tasks). For human evaluation, the generated tasks were indepen-dently reviewed by two human annotators, who assessed each task based on two criteria: Consistency and Solvabil-ity . Final scores were computed as the proportion of cases where both annotators reached agreement. In addition to human evaluation, we also conduct agent evaluation us-ing Gemini 2.5 Flash under the same agent config-uration. The results are shown in Table 4. From both hu-man and agent evaluations, we observe: (1) Tasks generated by G RAPH 2E VAL reveal clearer performance gaps between models of different sizes. (2) The KG-free variant produces web tasks that are largely confined to single-page interac-tions, and multi-page workflows are often unsolvable due to missing inter-page relations. (3) Tasks generated without a KG require LLM or manual review to resolve ambiguities, whereas G RAPH 2E VAL leverages KGs to enforce semantic consistency and ensure task solvability. 
+
+Table 4. Ablation studies on G RAPH 2E VAL .                          
+
+> Model GRAPH 2E VAL w/o KG GRAPH 2E VAL
+> Doc Web Doc Web
+> Agent Evaluation
+> Qwen2.5-VL-72B 0.68 0.12 0.85 0.24
+> Qwen2.5-VL-32B 0.36 0.08 0.50 0.17
+> Qwen2.5-VL-7B 0.29 0.07 0.44 0.12
+> Human Evaluation
+> Consistency 0.74 0.62 0.95 0.78
+> Solvability 0.73 0.60 0.93 0.72
+
+4.4. Comparison with Existing Methods 
+
+Human-Annotated Data Construction Methods. We compare the characteristics of G RAPH 2E VAL with two rep-resentative benchmarks: OSWorld, which focuses on web interaction capabilities, and the multimodal visual question answering benchmark MMBench. Compared with exist-ing human-annotated datasets, G RAPH 2E VAL enables auto-mated construction of tasks with low time cost, while main-taining strong semantic consistency and solvability, and covering a broader range of task types. 
+
+Synthetic Data Construction Methods. We compare TaskCraft and G RAPH 2E VAL in Table 6. TaskCraft uses a bottom-up approach, first generating atomic tasks and then combining them into complex ones from raw documents, 
+
+Table 5. Comparison on OSWorld, MMBench and G RAPH 2E VAL .N/A denotes Not Applicable.                     
+
+> Metric OSWorld [38] MMBench [20] GRAPH 2E VAL
+> Data Source Human + scripted Curated QA Synthetic Task Types Real web/desktop Multimodal QA Doc + Web Time Cost High Moderate Low Consistency High High High Solvability High N/A High
+
+while G RAPH 2E VAL follows a top-down paradigm, con-structing a complete knowledge graph and sampling sub-graphs to form tasks based on intrinsic relationships within the data. Moreover, while TaskCraft focuses on multi-tool use, G RAPH 2E VAL generates a broader range of task types. 
+
+Table 6. Comparison between G RAPH 2E VAL and TaskCraft.           
+
+> Metric TaskCraft [29] GRAPH 2E VAL
+> Methodology Bottom-up generation Top-down generation Task Space Processed documents Knowledge graphs Task Complexity Composition of atomic tasks Exploitation of intrinsic data relationships Task Types Multi-tool use Doc Understanding, Web
+
+## 5. Conclusion and Future Work 
+
+In this work, we introduce G RAPH 2E VAL , an automatic task generation framework that leverages KGs as an inter-mediate representation. By systematically modeling enti-ties and their relationships within documents and web data, the framework integrates multi-source data into a unified task space, enabling scalable, semantically consistent, and solvable agent task creation for evaluating agent capabilities across diverse scenarios. Based on this framework, we con-structed the G RAPH 2E VAL -B ENCH dataset. Experimental results demonstrate that tasks generated by G RAPH 2E VAL 
+
+exhibit improved semantic consistency and solvability, ef-fectively cover a wide range of scenarios, and reliably as-sess document understanding and web interaction capabili-ties across different settings. Future research will explore the following directions: (1) incorporating formalized safety policies to generate testable tasks for evaluating agent robustness under adver-sarial prompts, malicious environments, and other chal-lenging scenarios; and (2) exploiting the structural prop-erties of KGs to localize errors at the level of nodes and edges, providing fine-grained, interpretable insights into agents’ weaknesses in multimodal document understanding and web interaction task performance. 742 Acknowledgements. This work is supported by the Na-tional Natural Science Foundation of China (No. 62402429, U24A20326, 62441236), the Key Research and Develop-ment Program of Zhejiang Province (No. 2025C01026), the Ningbo Yongjiang Talent Introduction Programme (2023A-397-G), and the Young Elite Scientists Sponsor-ship Program by CAST (2024QNRC001). This work was supported by MYbank, Ant Group. We also grate-fully acknowledge the support of the Zhejiang Uni-versity Education Foundation Qizhen Scholar Founda-tion. 
+
+## References 
+
+[1] Saaket Agashe, Kyle Wong, Vincent Tu, Jiachen Yang, Ang Li, and Xin Eric Wang. Agent s2: A compositional generalist-specialist framework for computer use agents, 2025. 6 [2] Jinze Bai, Shuai Bai, Yunfei Chu, Zeyu Cui, Kai Dang, Xiaodong Deng, Yang Fan, Wenbin Ge, Yu Han, Fei Huang, et al. Qwen technical report. arXiv preprint arXiv:2309.16609 , 2023. 6 [3] Leo Boisvert, Mihir Bansal, Chandra Kiran Reddy Evuru, Gabriel Huang, Abhay Puri, Avinandan Bose, Maryam Fazel, Quentin Cappart, Jason Stanley, Alexandre La-coste, Alexandre Drouin, and Krishnamurthy Dvijotham. Doomarena: A framework for testing ai agents against evolv-ing security threats, 2025. 1, 2 [4] Yurun Chen, Xavier Hu, Yuhan Liu, Keting Yin, Juncheng Li, Zhuosheng Zhang, and Shengyu Zhang. Harmonyguard: Toward safety and utility in web agents via adaptive pol-icy enhancement and dual-objective optimization. arXiv preprint arXiv:2508.04010 , 2025. 1 [5] Zhaorun Chen, Mintong Kang, and Bo Li. Shieldagent: Shielding agents via verifiable safety policy reasoning, 2025. 1[6] Sanjiban Choudhury and Paloma Sodhi. Better than your teacher: Llm agents that learn from privileged ai feedback, 2024. 1 [7] DeepMind. Gemini 2.5 flash, 2025. Accessed: 2025-09-27. 6[8] Xiang Deng, Yu Gu, Boyuan Zheng, Shijie Chen, Samuel Stevens, Boshi Wang, Huan Sun, and Yu Su. Mind2web: Towards a generalist agent for the web, 2023. 1, 2 [9] Bangde Du, Minghao Guo, Songming He, Ziyi Ye, Xi Zhu, Weihang Su, Shuqi Zhu, Yujia Zhou, Yongfeng Zhang, Qingyao Ai, et al. Twinvoice: A multi-dimensional bench-mark towards digital twins via llm persona simulation. arXiv preprint arXiv:2510.25536 , 2025. 2 [10] Ivan Evtimov, Arman Zharmagambetov, Aaron Grattafiori, Chuan Guo, and Kamalika Chaudhuri. Wasp: Benchmarking web agent security against prompt injection attacks, 2025. 1, 2[11] Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu, Shirong Ma, Peiyi Wang, Xiao Bi, et al. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning. arXiv preprint arXiv:2501.12948 , 2025. 6 [12] Xueyu Hu, Tao Xiong, Biao Yi, Zishu Wei, Ruixuan Xiao, Yurun Chen, Jiasheng Ye, Meiling Tao, Xiangxin Zhou, Ziyu Zhao, et al. Os agents: A survey on mllm-based agents for general computing devices use. arXiv preprint arXiv:2508.04482 , 2025. 1 [13] Aaron Hurst, Adam Lerer, Adam P Goucher, Adam Perel-man, Aditya Ramesh, Aidan Clark, AJ Ostrow, Akila Weli-hinda, Alan Hayes, Alec Radford, et al. Gpt-4o system card. 
+
+arXiv preprint arXiv:2410.21276 , 2024. 6 [14] Ido Levy, Ben Wiesel, Sami Marreed, Alon Oved, Avi Yaeli, and Segev Shlomov. St-webagentbench: A benchmark for evaluating safety and trustworthiness in web agents, 2025. 1, 2 [15] Jia Li, Edward Beeching, Lewis Tunstall, Ben Lipkin, Ro-man Soletskyi, Shengyi Huang, Kashif Rasul, Longhui Yu, Albert Q Jiang, Ziju Shen, et al. Numinamath: The largest public dataset in ai4maths with 860k pairs of competition math problems and solutions. Hugging Face repository , 13 (9):9, 2024. 3 [16] Junkai Li, Yunghwei Lai, Weitao Li, Jingyi Ren, Meng Zhang, Xinhui Kang, Siyu Wang, Peng Li, Ya-Qin Zhang, Weizhi Ma, and Yang Liu. Agent hospital: A simulacrum of hospital with evolvable medical agents, 2025. 1 [17] Zeyi Liao, Jaylen Jones, Linxi Jiang, Eric Fosler-Lussier, Yu Su, Zhiqiang Lin, and Huan Sun. Redteamcua: Realistic adversarial testing of computer-use agents in hybrid web-os environments, 2025. 1, 2 [18] Evan Zheran Liu, Kelvin Guu, Panupong Pasupat, Tianlin Shi, and Percy Liang. Reinforcement learning on web inter-faces using workflow-guided exploration, 2018. 2 [19] Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, Yu Gu, Hangliang Ding, Kaiwen Men, Kejuan Yang, et al. Agentbench: Evaluating llms as agents. arXiv preprint arXiv:2308.03688 , 2023. 1 [20] Yuan Liu, Haodong Duan, Yuanhan Zhang, Bo Li, Songyang Zhang, Wangbo Zhao, Yike Yuan, Jiaqi Wang, Conghui He, Ziwei Liu, Kai Chen, and Dahua Lin. Mmbench: Is your multi-modal model an all-around player?, 2024. 2, 6, 8 [21] Yuhang Liu, Pengxiang Li, Zishu Wei, Congkai Xie, Xueyu Hu, Xinchen Xu, Shengyu Zhang, Xiaotian Han, Hongxia Yang, and Fei Wu. Infiguiagent: A multimodal generalist gui agent with native reasoning and reflection, 2025. 1 [22] Yuhang Liu, Pengxiang Li, Congkai Xie, Xavier Hu, Xi-aotian Han, Shengyu Zhang, Hongxia Yang, and Fei Wu. Infigui-r1: Advancing multimodal gui agents from reactive actors to deliberative reasoners, 2025. 1 [23] Gr´ egoire Mialon, Cl´ ementine Fourrier, Craig Swift, Thomas Wolf, Yann LeCun, and Thomas Scialom. Gaia: a bench-mark for general ai assistants, 2023. 1, 2 [24] Shishir G Patil, Huanzhi Mao, Fanjia Yan, Charlie Cheng-Jie Ji, Vishnu Suresh, Ion Stoica, and Joseph E. Gonzalez. The berkeley function calling leaderboard (BFCL): From tool use to agentic evaluation of large language models. In 
+
+Forty-second International Conference on Machine Learn-ing , 2025. 2 [25] Shuofei Qiao, Ningyu Zhang, Runnan Fang, Yujie Luo, Wangchunshu Zhou, Yuchen Eleanor Jiang, Chengfei Lv, 743 and Huajun Chen. Autoact: Automatic agent learning from scratch for qa via self-planning, 2024. 3 [26] Yujia Qin, Yining Ye, Junjie Fang, Haoming Wang, Shihao Liang, Shizuo Tian, Junda Zhang, Jiahao Li, Yunxin Li, Shi-jue Huang, Wanjun Zhong, Kuanye Li, Jiale Yang, Yu Miao, Woyu Lin, Longxiang Liu, Xu Jiang, Qianli Ma, Jingyu Li, Xiaojun Xiao, Kai Cai, Chuang Li, Yaowei Zheng, Chaolin Jin, Chen Li, Xiao Zhou, Minchao Wang, Haoli Chen, Zhao-jian Li, Haihua Yang, Haifeng Liu, Feng Lin, Tao Peng, Xin Liu, and Guang Shi. Ui-tars: Pioneering automated gui in-teraction with native agents, 2025. 6 [27] Christopher Rawles, Sarah Clinckemaillie, Yifan Chang, Jonathan Waltz, Gabrielle Lau, Marybeth Fair, Alice Li, William Bishop, Wei Li, Folawiyo Campbell-Ajala, Daniel Toyama, Robert Berry, Divya Tyamagundlu, Timothy Lill-icrap, and Oriana Riva. Androidworld: A dynamic bench-marking environment for autonomous agents, 2025. 2 [28] David Rein, Betty Li Hou, Asa Cooper Stickland, Jackson Petty, Richard Yuanzhe Pang, Julien Dirani, Julian Michael, and Samuel R Bowman. Gpqa: A graduate-level google-proof q&a benchmark. In First conference on language mod-eling , 2024. 2 [29] Dingfeng Shi, Jingyi Cao, Qianben Chen, Weichen Sun, Weizhen Li, Hongxuan Lu, Fangchen Dong, Tianrui Qin, King Zhu, Minghao Liu, Jian Yang, Ge Zhang, Jiaheng Liu, Changwang Zhang, Jun Wang, Yuchen Eleanor Jiang, and Wangchunshu Zhou. Taskcraft: Automated generation of agentic tasks, 2025. 1, 3, 6, 8 [30] Tianlin Shi, Andrej Karpathy, Linxi Fan, Jonathan Hernan-dez, and Percy Liang. World of bits: An open-domain plat-form for web-based agents. In Proceedings of the 34th In-ternational Conference on Machine Learning , pages 3135– 3144. PMLR, 2017. 2 [31] Hongjin Su, Ruoxi Sun, Jinsung Yoon, Pengcheng Yin, Tao Yu, and Sercan ¨ O. Arık. Learn-by-interact: A data-centric framework for self-adaptive agents in realistic environments, 2025. 1, 3 [32] Shubham Toshniwal, Wei Du, Ivan Moshkov, Branislav Kisacanin, Alexan Ayrapetyan, and Igor Gitman. Openmathinstruct-2: Accelerating ai for math with massive open-source instruction data, 2024. 3 [33] Ada Defne Tur, Nicholas Meade, Xing Han L` u, Alejan-dra Zambrano, Arkil Patel, Esin Durmus, Spandana Gella, Karolina Sta´ nczak, and Siva Reddy. Safearena: Evaluating the safety of autonomous web agents, 2025. 1, 2 [34] Yizhong Wang, Yeganeh Kordi, Swaroop Mishra, Alisa Liu, Noah A. Smith, Daniel Khashabi, and Hannaneh Hajishirzi. Self-instruct: Aligning language models with self-generated instructions, 2023. 3 [35] Yubo Wang, Xueguang Ma, Ge Zhang, Yuansheng Ni, Abhranil Chandra, Shiguang Guo, Weiming Ren, Aaran Arulraj, Xuan He, Ziyan Jiang, et al. Mmlu-pro: A more robust and challenging multi-task language understanding benchmark. Advances in Neural Information Processing Sys-tems , 37:95266–95290, 2024. 2 [36] Ziqi Wang, Xi Zhu, Shuhang Lin, Haochen Xue, Minghao Guo, and Yongfeng Zhang. Ragrouter-bench: A dataset and benchmark for adaptive rag routing. arXiv preprint arXiv:2602.00296 , 2026. 2 [37] Zhen Xiang, Linzhi Zheng, Yanjie Li, Junyuan Hong, Qinbin Li, Han Xie, Jiawei Zhang, Zidi Xiong, Chulin Xie, Carl Yang, Dawn Song, and Bo Li. Guardagent: Safeguard llm agents by a guard agent via knowledge-enabled reasoning, 2025. 1 [38] Tianbao Xie, Danyang Zhang, Jixuan Chen, Xiaochuan Li, Siheng Zhao, Ruisheng Cao, Toh Jing Hua, Zhoujun Cheng, Dongchan Shin, Fangyu Lei, Yitao Liu, Yiheng Xu, Shuyan Zhou, Silvio Savarese, Caiming Xiong, Victor Zhong, and Tao Yu. Osworld: Benchmarking multimodal agents for open-ended tasks in real computer environments, 2024. 1, 6, 8 [39] Tianbao Xie, Danyang Zhang, Jixuan Chen, Xiaochuan Li, Siheng Zhao, Ruisheng Cao, Toh Jing Hua, Zhoujun Cheng, Dongchan Shin, Fangyu Lei, Yitao Liu, Yiheng Xu, Shuyan Zhou, Silvio Savarese, Caiming Xiong, Victor Zhong, and Tao Yu. Osworld: Benchmarking multimodal agents for open-ended tasks in real computer environments, 2024. 2 [40] Canwen Xu, Daya Guo, Nan Duan, and Julian McAuley. Baize: An open-source chat model with parameter-efficient tuning on self-chat data, 2023. 3 [41] Can Xu, Qingfeng Sun, Kai Zheng, Xiubo Geng, Pu Zhao, Jiazhan Feng, Chongyang Tao, Qingwei Lin, and Daxin Jiang. Wizardlm: Empowering large pre-trained language models to follow complex instructions, 2025. 3 [42] Yunhe Yan, Shihe Wang, Jiajun Du, Yexuan Yang, Yuxuan Shan, Qichen Qiu, Xianqing Jia, Xinge Wang, Xin Yuan, Xu Han, Mao Qin, Yinxiao Chen, Chen Peng, Shangguang Wang, and Mengwei Xu. Mcpworld: A unified benchmark-ing testbed for api, gui, and hybrid computer use agents, 2025. 1 [43] Jianwei Yang, Hao Zhang, Feng Li, Xueyan Zou, Chunyuan Li, and Jianfeng Gao. Set-of-mark prompting unleashes ex-traordinary visual grounding in gpt-4v, 2023. 6 [44] Shunyu Yao, Noah Shinn, Pedram Razavi, and Karthik Narasimhan. τ -bench: A benchmark for tool-agent-user in-teraction in real-world domains, 2024. 2 [45] Longhui Yu, Weisen Jiang, Han Shi, Jincheng Yu, Zhengying Liu, Yu Zhang, James T. Kwok, Zhenguo Li, Adrian Weller, and Weiyang Liu. Metamath: Bootstrap your own mathe-matical questions for large language models, 2024. 3 [46] Xiang Yue, Tuney Zheng, Ge Zhang, and Wenhu Chen. Mammoth2: Scaling instructions from the web, 2024. 3 [47] Eric Zelikman, Yuhuai Wu, Jesse Mu, and Noah D. Good-man. Star: Bootstrapping reasoning with reasoning, 2022. 3[48] Guibin Zhang, Junhao Wang, Junjie Chen, Wangchunshu Zhou, Kun Wang, and Shuicheng Yan. Agentracer: Who is inducing failure in the llm agentic systems?, 2025. 1 [49] Shuyan Zhou, Frank F Xu, Hao Zhu, Xuhui Zhou, Robert Lo, Abishek Sridhar, Xianyi Cheng, Yonatan Bisk, Daniel Fried, Uri Alon, et al. Webarena: A realistic web envi-ronment for building autonomous agents. arXiv preprint arXiv:2307.13854 , 2023. 1 744

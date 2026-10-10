@@ -1,0 +1,492 @@
+Title: 11206.pdf
+
+URL Source: https://media.eventhosts.cc/Conferences/ECCV2026/pdfs/11206.pdf
+
+Published Time: Tue, 08 Sep 2026 20:01:59 GMT
+
+Number of Pages: 18
+
+Markdown Content:
+## Eliciting Self-Verification in Multimodal Reasoning Agents with Reinforcement Learning 
+
+Vishwas Sathish 1⋆† , Viresh Ranjan 2⋆ , Xinliang Zhu 2 , Arnab Dhua 2 , and Douglas Gray 2 
+
+> 1
+
+University of Washington, Seattle, USA 
+
+vsathish@cs.washington.edu  
+
+> 2
+
+Amazon, USA 
+
+{vireshr,xlzhu,adhua,douggray}@amazon.com 
+
+Abstract. Reasoning agents increasingly rely on external tools such as web search to answer complex queries. Reinforcement learning (RL) fine-tuning algorithms such as GRPO have improved long-form reasoning in text-only language models, particularly for coding and mathematics. Reliable tool use in multimodal agents, however, remains challenging because models must interpret text and images while integrating noisy retrieved evidence, often under sparse outcome-level supervision without explicit verification signals. We present Self-Verification via Reinforce-ment Learning (SVRL), an RL-only finetuning framework that trains multimodal agents to verify and filter retrieved evidence within their own reasoning traces, reducing reliance on external verifiers at infer-ence time. SVRL also introduces a search-aware penalty that discour-ages unnecessary tool calls and a query-diversity reward that encourages diverse, well-formed search queries, providing fine-grained feedback on when and what to search. Finetuning Qwen-2.5-VL-7B with SVRL on only 5,000 visual question answering examples yields consistent gains in multi-hop VQA generalization and tool efficiency across benchmarks. Overall, SVRL narrows the gap between compact agents and much larger proprietary models while requiring substantially lower training and in-ference cost. 
+
+Keywords: Large Language Models · Large Multimodal Models · Re-inforcement Learning · Visual Question Answering · RL Finetuning · Group Relative Policy Optimization · Test Time Scaling 
+
+1 Introduction 
+
+Multimodal large language models (MLLMs) are evolving from static perception systems into interactive agents that combine vision and text modalities with ex-ternal tool use. Commercial models such as ChatGPT and Gemini can interpret images and invoke actions such as web search or code execution [1, 17], but their training data, alignment objectives, and tool-use policies are largely pro-prietary, limiting scientific control and reproducibility. In open-source MLLMs,  
+
+> ⋆
+
+Equal contribution. † Corresponding author. 2 V. Sathish et al. <reason> Sources 1, 3 have similar birds and relevant context … I see the bird is Pied  Crow …need to perform text search                        
+
+> </reason>
+> <verify> 1,0,1,0 </verify>
+> <text_search>
+> Pied Crow Incubation Period,
+> How long is Pied Crow’s egg incubation …
+> </text_search>
+> <reason> Sources 1, 2 present con fl icting evidence .. 3, 4 agree on the incubation period
+> </reason>
+> <verify> 0,0,1,1 </verify>
+> <answer> 18-19 days </answer>
+> How many days is the egg incubation period of this bird?
+> <reason> I need to fi rst look up the name of this bird via an image search </reason>
+> <search><img></search>
+> 1. Explicit veri fi cation scores
+> for tool outputs
+> 3. Implicit re fl ection within
+> reasoning traces
+> 2. Candidate query sampling
+> for improved tool awareness
+
+(a) Successful multi-turn reasoning and verified tool use with SVRL .<reason> The image looks like a 
+
+cuckoos  bird. Typical incubation period for cuckoos is around 10 days </reason>        
+
+> <answer> 9-11 days </answer>
+> Did not invoke tool
+> when required
+
+(b) No tool calibration in SFT/ Inference methods. <reason> Based on the text search results the incubation period of a Collared crow is 15 days </reason>               
+
+> <answer> 15 days </answer>
+> Noisy results trusted and
+> not veri fi ed
+> <reason> Based on the image search results, the bird is a
+> Collared crow </reason>
+> <text_search>
+> Collared crow incubation period
+> </text_search>
+> Incorrect fi nal answer
+
+(c) Unverified results derail the model towards incorrect rea-soning, tool use and final answers in Vanilla GRPO .
+
+Fig. 1: Multi-hop tool-augmented VQA example and common pitfalls. The question requires identifying the bird and retrieving its incubation period (18–19 days). 
+
+capability is commonly built through visual instruction tuning [12, 31], data-driven self-supervision for tool invocation [42], and preference-based optimiza-tion [10, 36, 38, 60]. More recently, RL finetuning has re-emerged as a practical route to improving long-horizon reasoning in language models, aided in part by domains with automatic verifiers such as code execution and formal mathe-matics [6, 13, 28, 45]. Extending these gains to multimodal tool use is substan-tially more challenging because retrieved tool outputs are unstructured, and thus rarely admit reliable automatic verifiers. To study this setting, we use multi-hop visual question answering (VQA) as a concrete instantiation of tool-augmented multimodal reasoning, where a model answers a natural-language question grounded in an image. In knowledge intensive benchmarks such as InfoSeek and OK-VQA, the image alone is often insufficient to answer a question: the model must recognize visual entities and retrieve missing facts from external sources [8,16,24,34,44]. This produces multi-hop reasoning over perception, tool calls, and noisy evidence integration, similar to visual information seeking and active inference processes [7,15,22,39]. Figure 1 shows a running example in this regime and highlights representative pitfalls we repeatedly encounter in practice. We discuss them below. First, agents are often poorly calibrated about when search is needed. They may fail to invoke tools when external evidence is necessary or invoke them even when the answer is available from internal knowledge. We analyzed multi-hop reasoning traces produced by MMSearch-R1, an existing GRPO-based finetuning method, on a 2,000-example subset of FVQA [52]. In our analysis, search was required but not invoked in over 10% of cases, while over 30% of cases triggered unnecessary search. Figure 1b illustrates one such failure mode where a tool call Self-Verification via Reinforcement Learning 3
+
+was necessary, but never made. Prior work emphasizes on-demand tool use and the accuracy-cost tradeoff, suggesting that deciding when to search is itself a core part of the problem [24, 25, 52]. Second, even when search is warranted, tool outputs are noisy and require filtering. Retrieved pages can be irrelevant, outdated, or internally inconsistent. Without an explicit verification mechanism, models may copy the first plausible snippet, ignore disconfirming evidence, or fail to reconcile conflicts (Figure 1c). In our analysis of MMSearch-R1, nearly 45% of retrieved results were irrele-vant. Even when the agent issued an appropriate query and the returned results contained relevant evidence, it answered incorrectly in over 28% of cases. Prior visual web agents report similar failure patterns under clutter and distractors, often using additional re-ranking or verification stages to mitigate them. These stages add computation, latency, and cost, and can become a deployment bot-tleneck [18, 24, 35]. Third, learning reliable tool use is difficult under sparse supervision. Many pipelines provide only an outcome-level reward for the final answer, leaving in-termediate decisions (what to search, which result to open, what evidence to trust, when to stop) unlabeled. As a result, distinct failure cases can receive the same terminal penalty, making credit assignment brittle when step annota-tions are scarce. This sparsity also interacts poorly with GRPO: if all rollouts in a group receive the same reward, the within-group variance collapses and the standardized advantages provide little to no learning signal [14]. Consistent with this, 19.5% of MMSearch-R1’s text search queries are irrelevant, derailing trajectories early and reducing the information in the final GRPO correctness reward. Motivated by these issues, we introduce Self-Verification via Reinforce-ment Learning (SVRL), an RL-only finetuning algorithm for tool-augmented multimodal agents. Section 2 situates SVRL relative to prior work, and Section 3 presents the method and training objective. Section 4 describes the experimental setup and evaluation benchmarks. In Section 5, we evaluate SVRL on both in-distribution and out-of-distribution settings, and examine its behavior through tool-use analyses and qualitative examples. We also study whether SVRL ben-efits from a larger inference-time search budget by increasing the number of candidate queries available during search. In summary, our main contributions are: 1. Fine-grained search control. We augment the GRPO objective with re-ward terms that discourage unnecessary search and reward informative, di-verse query proposals. This provides fine-grained trajectory-level feedback that targets both when to search and what to search for. 2. Self-verification for evidence filtering. We elicit structured verification scores over retrieved items within the agent’s reasoning trace and optimize them as part of the RL objective. These scores make evidence selection and filtering explicit and learnable, and are applied at inference without any external verifier. 4 V. Sathish et al. 
+
+3. Stable optimization and test-time query scaling. We adopt Dr. GRPO to stabilize optimization under trajectory-dependent rewards. We further show that increasing the number of candidate search queries at inference improves accuracy, indicating that SVRL supports effective test-time scaling of search. 
+
+2 Related Work 
+
+Visual Question Answering. VQA spans early vision–language architectures and large-scale dataset-driven learning, and has evolved toward settings that re-quire compositional reasoning, reading text, and incorporating external knowl-edge [2, 19, 23, 26, 46]. Knowledge-intensive and multi-hop benchmarks such as OK-VQA, A-OKVQA, InfoSeek, WebQA, and LiveVQA further stress evidence acquisition and aggregation beyond the image [5, 8, 16, 34, 44]. Our work tar-gets this regime: we train on FVQA (as released in MMSearch-R1) and evaluate both in- and out-of-distribution, emphasizing tool-mediated multi-hop behavior rather than single-pass perception [24, 52]. 
+
+LLM finetuning for tool use. Modern MLLM pipelines typically start from pretrained transformer language-model backbones [4,47] and acquire interactive behavior through instruction tuning [12,31,49] and prompting that elicits explicit intermediate reasoning [50]. For knowledge-intensive QA, retrieval-augmented generation (RAG) injects retrieved context into the model input [29]; we report a RAG workflow baseline in Table 2 to separate the benefits of always-on retrieval from selective, agentic search. Tool use itself can be induced from data [42,56] and further aligned with preference-based objectives [36,38]. Reinforcement learning finetuning has recently shown strong gains on long-horizon reasoning in language models [13,43,45], and concurrent multimodal systems apply RL to improve web search behavior [25,35,52]. SVRL builds on this direction, but targets calibrated search decisions and explicit evidence filtering under noisy retrieval via fine-grained trajectory rewards that make tool-use errors more distinguishable during optimization. 
+
+Verification, reward design, and test-time scaling. Reliability is also im-proved by spending more compute at inference time (e.g., self-consistency and search branching) [48, 55], or by adding external re-ranking and verification stages in web-based agents [18, 22, 24]. Complementary lines study process-level supervision and verifier training for long-horizon reasoning [11, 30], as well as stabilization variants for RL finetuning [33, 57]. Closest to our emphasis on ver-ification signals are recent works that introduce explicit grounding or process-level supervision, but these approaches differ in source of supervision, target task and modality, or where verification is applied in the pipeline [41, 53, 58]. SVRL focuses on making verification and filtering behaviors learnable from compact multimodal rollouts while keeping inference free of external verifiers, and we empirically study how this interacts with GRPO-style learning dynamics under trajectory-level rewards. Self-Verification via Reinforcement Learning 5
+
+3 Self-Verification via Reinforcement Learning 
+
+In this section, we present SVRL, a Reinforcement Learning based finetun-ing framework for multimodal agents. We formalize the setting and objective, introduce two algorithmic modifications for trajectory-level rewards and self-verification, and discuss practical considerations for stable training. 
+
+3.1 Preliminaries 
+
+Visual Question Answering (VQA) . We consider a VQA dataset D of triples (I, q, y ∗), where I is an image, q is a natural-language question about the image, and y∗ is the ground-truth answer. While some instances can be answered directly from the image, we focus on multi-hop questions that require external knowledge and tool use (see Figure 1) [2, 8, 34, 44]. 
+
+Multimodal reasoning as policy optimization . Our primary goal is to im-prove a multimodal agent’s tool-use and reasoning capabilities at inference time. Given an input (I, q ), we view the model as a stochastic policy πθ that gener-ates a trajectory τ consisting of T intermediate reasoning steps s1: T and a final answer y, i.e., τ = ( s1: T , y ). The trajectory likelihood factorizes as 
+
+πθ (τ | I, q ) = 
+
+ TY
+
+> t=1
+
+πθ (st | I, q, s <t )
+
+
+
+πθ (y | I, q, s ≤T ). (1) Each step st = ( lt, a t, p t) follows a structured format and may contain (i) a natural-language reasoning lt within <reason>...</reason> tags and (ii) an action at (e.g., a tool invocation or emitting the final answer) with optional tool parameters pt. A representative multi-step reasoning process can be seen in Figure 1a. We follow the tool set and formatting conventions of MMSearch-R1 throughout this paper for simplicity [52]. 
+
+Group Relative Policy Optimization (GRPO) . We finetune πθ with RL to maximize a trajectory-level reward R(τ ), regularized by a KL penalty to a fixed reference policy πθref :
+
+max  
+
+> θ
+
+E(I,q,y ∗)∼D 
+
+h
+
+Eτ ∼πθ (·| I,q )[R(τ )] − β D KL 
+
+ πθ (· | I, q ) ∥ πθref (· | I, q )i
+
+.
+
+GRPO is a PPO-style optimizer that estimates advantages from groups of on-policy rollouts without a learned value function [43,45]. For each (I, q ), we sample a group τ 1: G using a behavior policy πθold , compute standardized group advan-tages ˆAi from {R(τ (i))}Gi=1 , and apply the clipped surrogate PPOClip( r, A ) = min( rA, clip( r, 1−ϵ, 1+ ϵ)A) with an importance ratio ri(θ) = πθ (τ (i))/π θold (τ (i)):
+
+max  
+
+> θ
+
+ED Eτ 1: G
+
+"
+
+1
+
+G
+
+> G
+
+X
+
+> i=1
+
+PPOClip  ri(θ), ˆAi
+
+ − β D KL 
+
+ πθ ∥ πθref 
+
+#
+
+(2) 6 V. Sathish et al. 
+
+3.2 When and What to Search? 
+
+Humans typically decide whether to search and how to phrase a query by trad-ing off expected information gain against time and effort, consistent with ideas in rational metareasoning and information foraging [37,40]. We reflect this intu-ition by augmenting the GRPO maximization objective with search-aware and query-diversity rewards, so trajectory returns depend explicitly on when search is invoked and on the quality of the proposed queries. We begin from the RL fine-tuning setup in MMSearch-R1 [52], which trains a multimodal agent to use text and image search with a reward of the form rbase = (1 − α) racc · rsearch + α r fmt .
+
+Here, racc is exact-match accuracy against the ground-truth answer, rfmt enforces a valid action format (common in RL finetuning of reasoning models) [13], and 
+
+rsearch discourages excessive tool calls to reduce cost and latency. 
+
+Tool calibration (when to search) . A uniform step-style penalty is well motivated when learning a policy from scratch (RL navigation, manipulation, etc), but it can be sub-optimal when finetuning a pretrained model that already answers a subset of questions without tools. Penalizing search uniformly can also suppress necessary tool use, since it does not distinguish avoidable search from required search. We therefore construct a search-aware factor using the pretrained model as a weak competence prior. Concretely, for each training input 
+
+(I, q ) we run a single forward pass on the model without tools to obtain ˆy; if ˆy =
+
+y∗, we label the instance as search_free . During RL rollouts, we downweight trajectories that invoke a search tool on a search_free instance: 
+
+raware =
+
+(
+
+λsa if search_free and a search tool is called ,
+
+1 otherwise .
+
+In our experiments, we set λsa = 0 .1 and replace the baseline search penalty with raware . This targets avoidable tool calls while preserving the incentive to search when needed. Empirically, it improves both the accuracy–search tradeoff and overall tool calibration (Table 1, Figure 5). 
+
+Query diversity (what to search) . We additionally find that text-search queries produced by the agent are often underspecified, even when search is nec-essary. To encourage better query formulation, we prompt the model to propose 
+
+k candidate queries and randomly execute one of the valid, unique queries. Let 
+
+ˆk ≤ k denote the number of unique queries that are produced in the required format. We define a query-count factor 
+
+rcount =
+
+(
+
+1, if the rollout makes no text-search call ,
+
+max( ϵ, ˆk/k ), otherwise ,
+
+where ϵ > 0 is a small floor to avoid degenerate zero reward when no valid queries are produced. We incorporate rcount multiplicatively into the task term of the reward, so rollouts are explicitly differentiated by the number of usable Self-Verification via Reinforcement Learning 7Corvus albus egg incubation period in days 
+
+> <answer>
+> 18-19 days
+> </answer>
+> Pied crow egg incubation period
+> How many eggs are laid by pied crow
+> Incubation period of this bird in the image
+> Qwen2.5-VL-7B
+
+…
+
+> How many days is the egg incubation period of this bird?
+
+Fig. 2: Test Time Verification . We demonstrate the need for verification of search queries and tool outputs via an external verifier. GPT-5 filters incorrect search queries and tags noisy web page snippets. With this verification process and no additional model finetuning, we observe improvements in multi-hop VQA performance. 
+
+query proposals. This encourages the agent to generate multiple well formed, di-verse queries, improving the specificity of search intent and downstream evidence retrieval. 
+
+3.3 Verifying Search Results 
+
+Web retrieval is noisy: search results can be irrelevant, outdated, or internally inconsistent. Drawing on signal-detection and source-monitoring views of vali-dation under uncertainty [20, 27], we make evidence filtering explicit by training the agent to score the usefulness of retrieved items and suppress misleading snip-pets. This targets a common failure of GRPO-finetuned compact agents, which often over-trust early snippets and aggregate brittle evidence, consistent with prior web-based multimodal agents [18, 24, 35]. 
+
+Test Time Verification . To quantify the benefit of denoising, we introduce an external verifier at inference time. Specifically, we use a stronger text-only model (GPT-5) to filter both query candidates and retrieved snippets without access to the ground-truth answers. For each input (I, q ), we generate multiple candidate text queries from the base agent (via repeated decoding with temperature = 1 ), and ask the verifier to retain only the queries that are likely to retrieve relevant evidence. We then run text search using the retained queries and ask the verifier again to select useful snippets given the original (I, q ) and the retrieved context (Figure 2). This test-time filtering consistently improves final accuracy while keeping the answering model fixed, which isolates the error source to noisy tool outputs and weak evidence selection (See Table 1). 
+
+Self-Verification . Test-time verification improves accuracy but is computa-tionally expensive and reduces the deployment advantage of compact agents. Our goal is to recover these gains without any external verifier at inference time. We do so by eliciting self-verification inside the agent’s reasoning trace (Figure 3) and optimizing it directly during RL finetuning. Concretely, for each input (I, q )
+
+the agent (i) proposes multiple candidate text-search queries and (ii) assigns a structured binary usefulness vector to retrieved items, e.g., <verify> 0,1,0,1 </verify> , together with a short natural-language justification. 8 V. Sathish et al. <reason> Source 1 contains con fl icting evidence .. 2, 3 agree on the egg incubation period of pied crow </reason>        
+
+> <verify> 0,1,1 </verify>
+> <answer> 18-19 days </answer>
+> Qwen2.5-VL-7B
+> Based on the ground truth 18-19 days, sources 1 and 3 are likely to be helpful since they explicitly mention the answer …
+> <gt_verify> 1,0,1,0 </gt_verify> Ground Truth Answer:
+> 18-19 days
+
+…
+
+> 2
+> 1
+> 3
+> search_aware = 1
+> query_align = 1
+> snippet_align = 1/3
+> query_count = 3/4
+> How many days is the egg incubation period of this bird?
+> 4
+
+Fig. 3: Self-Verification via oracle feedback during finetuning. GPT-5 is used as the oracle verifier that receives the same web snippets as the model and additionally the ground truth answer. The verifier then annotates each web snippet based on the utility towards inferring the correct answer. This verifier is discarded during inference. 
+
+To avoid reward-hacking from additive shaping terms (Section 3.4), we keep verification supervision modular and apply it only when the final answer is correct. Let raware and rcount denote the search-calibration factors from Sec-tion 3.2. We introduce two additional alignment factors, both supervised at training time by an external verifier that scores queries and snippets: rqalign 
+
+measures agreement between the agent’s query proposals and verifier labels of which proposed queries are useful, and rsalign measures agreement between the agent’s snippet-level self-scores and verifier labels of which retrieved items con-tain answer-supporting evidence. We combine these terms into a single SVRL factor, 
+
+rsvrl = raware · rcount · rqalign · rsalign . (3) Let racc ∈ { 0, 1} denote exact-match correctness and rfmt ∈ [0 , 1] denote the format reward. Our final trajectory reward is 
+
+r(τ ) = (1 − α) racc (τ ) rsvrl (τ ) + α r fmt (τ ). (4) During training, we obtain the query and snippet labels using a verifier model with access to the ground-truth answer y∗, which is necessary to robustly handle aliases and paraphrases beyond string matching. We then finetune the agent so that its self-verification scores align with these labels. Figure 3 illustrates the SVRL scores for a sample reasoning trace. The verifier is discarded at inference time, where the agent must perform verification and filtering on its own. Finally, we incorporate Equation 4 into the KL-regularized GRPO objective by replacing the trajectory reward R(τ ) with our r(τ ):
+
+max 
+
+θ E(I,q,y ∗)∼D 
+
+h
+
+Eτ ∼πθ (·| I,q )[r(τ )] − β D KL 
+
+ πθ (· | I, q ) ∥ πθref (· | I, q )i
+
+. (5) This yields a structured, fine-grained, trajectory-level learning signal that targets query quality and evidence filtering, improving tool integration and accuracy in Table 1 and Table 2. Algorithm 1 summarizes the SVRL finetuning algorithm discussed in this section. Self-Verification via Reinforcement Learning 9
+
+Algorithm 1 SVRL finetuning 
+
+Require: Dataset D, system prompt S, train-time verifier G, policy πθ , search tools 
+
+T , format weight α, group size G
+
+1: Self-labeling .2: for all (I, q, y ∗) ∈ D do 
+
+3: ˆy ← πθ (S, I, q ) ▷ single pass; no tool calls 4: ℓ(I, q ) ← I[ˆ y = y∗] ▷ 1 iff search_free 
+
+5: end for 
+
+6: RL finetuning with Dr.GRPO .7: while not converged do 
+
+8: Sample minibatch B ⊂ D 
+
+9: for all (I, q, y ∗) ∈ B do 
+
+10: Sample rollouts {τ (i)}Gi=1 ∼ πθold (· | S , I, q ; T )
+
+11: for i = 1 to G do 
+
+12: Parse τ (i) → (y, p, v ) ▷ answer, tool params, self-verification 13: v∗ ← G (I, q, y ∗, p ) ▷ train-time verification labels 14: rsvrl ← search_aware (ℓ(I, q ), τ (i)) · query_count (τ (i)) ▷ Section 3.2 15: rsvrl ← rsvrl · query_align (v, v ∗) · snippet_align (v, v ∗) ▷ Section 3.3 16: r(i) ← (1 − α) · acc_score · rsvrl + α · format_score 
+
+17: end for 
+
+18: Update θ using {(τ (i), r (i))}Gi=1  ▷ group advantages + Dr.GRPO objective 19: end for 
+
+20: end while 
+
+3.4 Practical Considerations 
+
+Reward diversity for GRPO. GRPO estimates group-relative advantages by normalizing rewards within a rollout group for each input (I, q ) (subtracting the group mean and dividing by the group standard deviation) [45]. If all rollouts in a group receive the same reward, there is no relative preference signal and the resulting update becomes uninformative; if the within-group reward dispersion is very small, the normalization is poorly conditioned and gradients can become noisy. With the baseline reward rbase (Section 3.2), we often observe near-tied groups because trajectories share the same correctness and similar tool-use pat-terns. In contrast, rsvrl varies with query formulation, retrieved snippets, and verification outcomes, increasing within-group reward dispersion and yielding more informative advantages. Empirically, this lets us use a smaller group size (G = 4 ) than prior work (MMSearch-R1 uses G = 8 ), improving throughput on a single 8 ×A100 node. 
+
+Dr. GRPO for training stability. In early experiments, vanilla GRPO exhib-ited unstable optimization, including intermittent spikes in actor gradient norms and drift in response length (Figure 4). We therefore adopt Dr. GRPO, which re-moves normalization factors in the update (for example, standard-deviation and length normalization) that can amplify gradients under trajectory-dependent re-wards [33]. We use Dr. GRPO for all SVRL variants reported in Table 1 and Table 2. 10 V. Sathish et al. 0 100 200 300 400               
+
+> Training Step
+> 0% 20% 40% 60% 80% 100%
+> (a) Training Accuracy
+> 0100 200 300 400
+> Training Step
+> 0% 20% 40% 60% 80% 100%
+> (b) Tool-Use Rate
+> 0100 200 300 400
+> Training Step
+> 0246810 (c) Policy Gradient Norm
+> 0100 200 300 400
+> Training Step
+> 0500 1000 1500 2000
+> (d) Response Length
+> MMSearch-r1++ (Baseline) SVRL (Ours)
+
+Fig. 4: SVRL yields more stable RL finetuning dynamics. Mean over 3 seeds with ±1 standard deviation shown. All runs use 400 steps, batch size 32, group size 4, and multi-turn tool-use trajectories. SVRL is compared against MMSearch-R1++ (MMSearch-R1 reproduced with ReAct-style prompting [52, 56]). (a) training perfor-mance, (b) search ratio, (c) policy gradient norm, and (d) response length. 
+
+LLM-judge rewards and reward hacking. We also tried replacing exact-match correctness with an LLM-judge reward during training (Qwen3-32B com-paring y to y∗). Although judge rewards could tolerate aliases, they were vul-nerable to reward hacking: the policy increased answer verbosity and began to output hedged or multi-answer responses that judges sometimes scored favor-ably despite the answers themselves being non-committal. This is consistent with known judge failure modes [21,32,36,59]. We therefore use exact-match correct-ness for training, and reserve LLM judges for evaluation-time scoring (following the benchmark protocol). For reward shaping, we found additive mixtures of shaping terms to be easier to exploit (partial credit despite incorrect answers), so we gate fine-grained signals by correctness via the multiplicative factor racc .r svrl .Another instance of reward hacking occurred in the query-alignment ablation without the search-aware factor. Although query alignment is gated by correct-ness, the model learned to invoke search on nearly every example to maximize the query-alignment reward while still producing correct answers. Adding the search-aware factor reduced unnecessary search, while the full self-verification objective further improved both accuracy and tool efficiency (Table 1). 
+
+4 Experimental Setup 
+
+Models . Our primary experiments use the base Qwen2.5-VL-7B-Instruct back-bone which we finetune with our method and evaluate on all benchmarks [3]. We further re-implement and finetune with the baseline GRPO method presented in MMSearch-R1 and an improved method MMSearch-R1++ that replaces the original system prompt with a ReAct based prompt [52]. Additionally, for strong comparison to modern LLMs, we also report inference-time results for GPT-4o across the datasets used. 
+
+Datasets . We train Qwen-2.5-VL-Instruct with our algorithm on the Factual VQA (FVQA) dataset. FVQA contains a mix of direct-answer questions and Self-Verification via Reinforcement Learning 11                                   
+
+> Table 1: Ablations on finetuning with GRPO. Acc (%) denotes LLM-as-judge accu-racy. SR (%) denotes search ratio. Details in Section 5. Model FVQA-test InfoSeek Acc SR Acc SR MMSearch-R1 51.1 64.2 49.8 63.5 MMSearch-R1++ 56.4 80.3 55.1 59.7 SVRL-query-align 57.7 97.6 58.2 98.0 SVRL-llm-judge 58.1 36.7 58.0 50.6 SVRL-search-aware 59.9 80.3 57.0 85.8 SVRL-ttv 60.6 80.3 58.3 85.2 SVRL-self-verification 64.2 61.2 64.1 59.2
+
+multi-hop questions that require tools, which helps RL avoid degenerating into tool use on every example. Following Wu et al ., we use 5,000 examples for train-ing and reserve 1,800 for testing. We evaluate on FVQA and InfoSeek as in-distribution benchmarks, since FVQA is sampled from the broader InfoSeek collection and shares the same underlying data and task structure. To assess ro-bustness, we additionally evaluate out-of-distribution on LiveVQA, MMSearch and SimpleVQA datasets, which differ in query style and retrieval conditions and therefore test whether the learned behavior transfers beyond the training distribution [8, 9, 16, 24, 52]. 
+
+Implementation details . We use an LLM judge (GPT-5) to determine final answer correctness when computing accuracy, following the evaluation proto-col and judge prompt presented in [52]. This choice provides a scalable and consistent correctness signal across benchmarks where answers may have minor surface-form variations (e.g., aliases, physical units, date-time formats), while keeping our reported numbers directly comparable to prior work. We train our model with a ReAct-style system prompt to structure tool use and intermediate reasoning, and we include the full prompt templates in the appendix [56]. For tool access, we use Google Image Search and Google text search via a third party API. To reduce redundant and expensive API calls, we implement a caching layer for text and image search results on DynamoDB. All training and inference ex-periments are run on 8 ×A100 GPUs using PyTorch, Ray and veRL framework. 
+
+5 Results 
+
+Ablations . Table 1 isolates the impact of each component. MMSearch-R1 re-produces the original recipe [52]. MMSearch-R1++ strengthens this baseline by switching to a ReAct-style prompt and removing the KL penalty and entropy coefficient [51]. SVRL-llm-judge adds DrGRPO but replaces exact-match with an LLM judge reward. Here, accuracy improves slightly, but answers become longer and less decisive, consistent with reward hacking. SVRL-query-align 12 V. Sathish et al.                                                                                                                    
+
+> Table 2: Performance across benchmarks. Acc (%) denotes answer accuracy and SR (%) denotes search ratio. SVRL improves accuracy across all datasets and achieves a better accuracy-search tradeoff, indicating more effective multi-turn reasoning and tool use. Details in text. Model FVQA-test InfoSeek MMSearch LiveVQA SimpleVQA Acc SR Acc SR Acc SR Acc SR Acc SR
+> Direct Answer
+> Qwen-2.5-VL-7B 26.7 0.0 20.1 0.0 12.8 0.0 17.8 0.0 38.4 0.0 Qwen-2.5-VL-32B 24.7 0.0 25.8 0.0 15.7 0.0 18.7 0.0 40.1 0.0 Qwen-2.5-VL-72B 27.1 0.0 28.0 0.0 15.7 0.0 20.1 0.0 42.2 0.0 GPT-4o 41.7 0.0 42.7 0.0 22.2 0.0 26.9 0.0 46.6 0.0
+> RAG Workflow
+> Qwen-2.5-VL-7B 51.6 100 53.7 100 52.2 100 48.0 100 51.6 100 Qwen-2.5-VL-32B 57.0 100 56.8 100 57.9 100 49.6 100 54.5 100 Qwen-2.5-VL-72B 62.2 100 59.4 100 59.6 100 56.0 100 61.0 100 GPT-4o 66.0 100 59.1 100 62.5 100 59.6 100 63.4 100
+> Adaptive Search
+> MMSearch-R1++ 56.4 80.3 55.1 59.7 53.8 88.5 48.4 76.2 57.4 42.5
+> SVRL-full-7B 65.3 61.4 64.7 52.3 60.3 82.0 57.8 48.6 58.3 27.0
+
+adds query alignment without the search-aware factor. It improves accuracy, but the model invokes search on nearly every example to maximize query-alignment reward. SVRL-search-aware adds the calibration term from Section 3.2, im-proving accuracy by discouraging avoidable search while preserving search when needed. SVRL-ttv applies external test-time verification to filter query candi-dates and snippets, yielding a large gain that isolates evidence selection as a dominant failure mode. SVRL-self-verification replaces the external verifier with our train-time self-verification objective (Section 3.3), recovering most of the denoising benefit without verifier dependence at inference. 
+
+VQA generalization . Table 2 compares three regimes: Direct Answer (single-pass prediction from (I, q )), RAG Workflow (retrieval for every instance; SR =100 ), and Adaptive Search (RL-finetuned agents that decide when to search). SVRL-full-7B consistently improves over the strongest adaptive-search baseline, MMSearch-R1++, by roughly 8 points on FVQA-test and 9 points on InfoS-eek while also reducing search ratio, indicating a better accuracy-cost tradeoff. SVRL-full-7B approaches GPT-4o on FVQA-test (65.3 vs. 66.0) despite oper-ating in the 7B regime. On SimpleVQA, gains are smaller, which suggests that search behavior may depend on tool parameters such as query language. We also note that time-sensitive or under specified questions can introduce irreducible evaluation noise. Additional training and inference results, and tool use analysis are provided in the Supplementary Materials. Self-Verification via Reinforcement Learning 13 0% 2% 5% 8% 10% 12% 15% 18%  
+
+> % of incorrect samples  12.6% 2.7%
+> (a) Over-confidence Rate
+> 0% 10% 20% 30% 40%
+> % of incorrect samples
+> 30.1% 37.0%
+> (b) Extraction Failure Rate
+> 0% 20% 40% 60% 80% 100% 120%
+> % of search-required samples
+> 89.9% 97.7%
+> (c) Search Precision
+> 0% 20% 40% 60% 80%
+> % of no-search-required samples
+> 54.6% 70.8%
+> (d) Search Recall
+> MMSearch-R1++ (Baseline) SVRL (Ours)
+
+Fig. 5: Tool-use analysis. Aggregated FVQA and InfoSeek statistics. 
+
+Analysis . Figure 7 shows qualitative multi-hop examples from the SVRL-finetuned agent. We observe that SVRL induces more robust reasoning traces that compare and reconcile evidence across retrieved results, even though we do not supervise free-form critique text directly. This behavior is consistent with the verification-alignment rewards, which make evidence filtering explicit dur-ing optimization. Figure 5 summarizes the corresponding changes in tool be-havior: SVRL reduces over-confidence failures where search is omitted despite being required (Figure 5(a)) and improves search precision and recall under the 
+
+search_free annotations (Figures 5(c) and (d)). Finally, Figure 5(b) reports the conditional rate at which relevant evidence appears in retrieved content given an incorrect answer, isolating evidence utilization errors from retrieval quality. 
+
+Fig. 6: Test-time scaling .SVRL benefits from addi-tional search budget. 
+
+Test-time scaling . A practical benefit of self-verification is improved test-time scaling : allocat-ing more inference-time computation (e.g., sam-pling, search, and verification) can increase accu-racy under a larger compute budget, as studied in self-consistency voting, tree-based search over reasoning paths, and self-evaluation guided beam search [48, 54, 55]. We run preliminary scaling ex-periments by increasing the text search budget at inference. Concretely, we evaluate on a 256-example subset of FVQA-test and allow up to 15 parallel text searches per question, producing multiple can-didate answers that we aggregate by simple major-ity vote 3. Figure 6 reports accuracy as a function of the allowed number of parallel searches. SVRL continues to benefit from additional search bud-get, whereas the baseline (MMSearch-R1++) satu-rates after roughly 5 searches, consistent with weaker query diversity and less reliable evidence filtering. Because SVRL proposes multiple queries within a single reasoning step, it also reduces the need for repeated full trajectory sampling, improving wall-clock ef- 
+
+> 3
+
+See Supplementary for details 14 V. Sathish et al. <reason> The first and second results are useful because they explicitly name the same location for the event, mentioning Sangam Colosseum. Third result provides no location information and fourth snippet is about a different event in Bangkok. Result 5 uses a different name for the same event. </reason> 
+
+<verify>1, 1, 0, 0, 1</verify> 
+
+<answer> 
+
+Sangam Colosseum, Seoul 
+
+</answer> 
+
+<reason> The image is a map of the United Kingdom with a red-colored region highlighted. Based on the shape and location, it appears to be the southern part of England, specifically the area around the English Channel.</reason> 
+
+<answer> 
+
+South West England 
+
+</answer> 
+
+Where is the red-colored region located?  What event are these trophies associated with? 
+
+<reason> The image shows several silver trophies with a figure on top, which are commonly associated with awards ceremonies. The design resembles the Academy Awards statuette, which is known as the Oscar. This suggests that the trophies are related to the Oscars ceremony. Ineed to perform an image search to confirm this. </reason> 
+
+<search><img></search> 
+
+<reason> The image search results provide information about the European Film Awards, … The trophies are specifically linked to the 37th European Film Awards, which took place in Lucerne on December 7, 2024. No further text search is necessary as the image search results provide sufficient information to answer the question. </reason> 
+
+<verify>1, 0, 1</verify> 
+
+<answer> 
+
+European Film Awards 
+
+</answer> 
+
+<reason> The image shows a group of people on a stage with a large screen in the background displaying a logo. This suggests it could be a gaming tournament or esports event. However, there is no explicit information in the image about the location of the event. To find out where this event took place, I need more context. </reason> 
+
+<search><img></search> 
+
+Where did this event take place? 
+
+<reason> All the image search results provide information about the event being part of the VCT 2025: Pacific Stage 1, but the specific location is not mentioned. Therefore, a text search is necessary to find the exact location of the event. </reason> 
+
+<verify>1, 1, 1, 1</verify> 
+
+<text_search> 
+
+VCT 2025 Pacific Stage 1 location, 
+
+BOOM Esports VCT Pacific Stage 1 location 
+
+RRQ VCT 2025 Pacific Stage location 
+
+</text_search> 
+
+<reason> The first three results point to battle of Waterloo. The fourth and fifth results are not relevant and mention battle of Cowpens. I will answer using the first three results. </reason> 
+
+<verify>1, 1, 1, 0, 0</verify> 
+
+<answer> 
+
+Battle of Waterloo 
+
+</answer> 
+
+<reason> The image depicts a scene with soldiers on horseback, which suggests it could be related to a historical battle or military event. The attire and style of the uniforms suggest it might be from the 18th or 19th century. However, without more context or specific details, … 
+
+</reason> 
+
+<search><img></search> 
+
+What historical event is depicted in this painting? 
+
+<reason>… The first result mentions the British invasion of New Bedford, …while the third result describes the Siege of Tournai in 1709 … However, the first result is more specific, … The second and fourth results are less relevant… </reason> 
+
+<verify>1, 0, 0, 0</verify> 
+
+<text_search> 
+
+historical event depicted in the painting "Scotland for Ever" by Butler, Lady? 
+
+</text_search> 
+
+Fig. 7: Qualitative examples . FVQA-test cases for trained SVRL model. Top-left shows an example that did not require search. Top-right shows a sample that required only image search. Bottom two rows show multi-turn reasoning over multiple tools -one with a correct and the other with an incorrect answer. 
+
+ficiency. We leave stronger aggregation rules and more structured search proce-dures for future work. 
+
+6 Conclusion 
+
+We presented SVRL, an RL-only finetuning framework that improves tool aug-mented multi-hop VQA in compact multimodal agents by eliciting self-verification within their reasoning traces. SVRL turns evidence selection into a learnable trajectory signal by coupling calibrated search decisions and query diversity with verifier-aligned supervision for filtering retrieved content during training, while requiring no external verifier at inference. Across FVQA-test and InfoS-eek, SVRL consistently improves accuracy and the accuracy–search tradeoff over prior GRPO-based baselines, and narrows the gap to substantially larger pro-prietary models. Ablations indicate that search calibration and self-verification drive most of the gains, and test-time verification quantifies the benefit of de-noising noisy retrieval. Limitations include dependence on web tools and their failure modes, reliance on a training-time judge whose labels may introduce bias, and sensitivity to prompt and tool formatting. Future work will broaden SVRL to richer tool suites and modalities, reduce judge dependence via stronger self-supervised verification signals, and improve robustness under retrieval dis-tribution shift and evolving web content. Self-Verification via Reinforcement Learning 15 
+
+Impact Statement 
+
+SVRL improves the tool-augmented reasoning and tool-use efficiency of compact multimodal models, narrowing their performance gap with much larger propri-etary models. By reducing unnecessary search and avoiding an external verifier at inference time, it can lower deployment cost and resource use. These gains potentially make multimodal agents more accessible and support safer, more private, and more controllable deployment in resource-constrained settings, in-cluding future edge-device applications. 
+
+Acknowledgements 
+
+We thank Rajesh Rao and Rene Vidal for insightful discussions and valuable feedback. 
+
+References 
+
+1. Achiam, J., Adler, S., Agarwal, S., Ahmad, L., Akkaya, I., Aleman, F., et al.: GPT-4 technical report. arXiv preprint arXiv:2303.08774 (2023) 2. Antol, S., Agrawal, A., Lu, J., Mitchell, M., Batra, D., Zitnick, C.L., Parikh, D.: VQA: Visual question answering. In: ICCV (2015) 3. Bai, S., Chen, K., Liu, X., Wang, J., Ge, W., Song, S., Dang, K., Wang, P., Wang, S., Tang, J., Zhong, H., Zhu, Y., Yang, M., Li, Z., Wan, J., Wang, P., Ding, W., Fu, Z., Xu, Y., Ye, J., Zhang, X., Xie, T., Cheng, Z., Zhang, H., Yang, Z., Xu, H., Lin, J.: Qwen2.5-VL technical report. arXiv preprint arXiv:2502.13923 (2025) 4. Brown, T.B., Mann, B., Ryder, N., Subbiah, M., Kaplan, J., Dhariwal, P., Nee-lakantan, A., Shyam, P., Sastry, G., Askell, A., et al.: Language models are few-shot learners. arXiv preprint arXiv:2005.14165 (2020) 5. Chang, Y., Narang, M., Suzuki, H., Cao, G., Gao, J., Bisk, Y.: WebQA: Multihop and multimodal QA. In: CVPR (2022) 6. Chen, M., Tworek, J., Jun, H., Yuan, Q., et al.: Evaluating large language models trained on code (2021), arXiv:2107.03374 7. Chen, Q., Pitawela, D., Zhao, C., Zhou, G., Chen, H.T., Wu, Q.: WebVLN: Vision-and-language navigation on websites. arXiv preprint arXiv:2312.15820 (2023) 8. Chen, Y., Hu, H., Luan, Y., Sun, H., Changpinyo, S., Ritter, A., Chang, M.W.: Can pre-trained vision and language models answer visual information-seeking ques-tions? arXiv preprint arXiv:2302.11713 (2023) 9. Cheng, X., Zhang, W., Zhang, S., Yang, J., Guan, X., Wu, X., Li, X., Zhang, G., Liu, J., Mai, Y., Zeng, Y., Wen, Z., Jin, K., Wang, B., Zhou, W., Lu, Y., Li, T., Huang, W., Li, Z.: SimpleVQA: Multimodal factuality evaluation for multimodal large language models. arXiv preprint arXiv:2502.13059 (2025) 10. Christiano, P.F., Leike, J., Brown, T.B., Martic, M., Legg, S., Amodei, D.: Deep re-inforcement learning from human preferences. In: Advances in Neural Information Processing Systems (NeurIPS) (2017) 11. Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M., Tworek, J., Hilton, J., Nakano, R., Hesse, C., Schulman, J.: Training verifiers to solve math word problems. arXiv preprint arXiv:2110.14168 (2021) 16 V. Sathish et al. 12. Dai, W., Li, J., Li, D., Tiong, A.M.H., Zhao, J., Wang, W., Li, B., Fung, P., Hoi, S.: InstructBLIP: Towards general-purpose vision-language models with instruction tuning. arXiv preprint arXiv:2305.06500 (2023) 13. DeepSeek-AI: DeepSeek-R1: Incentivizing reasoning capability in LLMs via rein-forcement learning. arXiv preprint arXiv:2501.12948 (2025) 14. Deng, W., Li, Y., Gong, B., Ren, Y., Thrampoulidis, C., Li, X.: On group rela-tive policy optimization collapse in agent search: The lazy likelihood-displacement (2025), arXiv preprint arXiv:2512.04220 15. Friston, K., FitzGerald, T., Rigoli, F., Schwartenbeck, P., Pezzulo, G.: Active inference: A process theory. Neural Computation 29 (1), 1–49 (2017). https: //doi.org/10.1162/NECO_a_00912 
+
+16. Fu, M., Peng, Y., Liu, B., Wan, Y., Chen, D.: LiveVQA: Live visual knowledge seeking. arXiv preprint arXiv:2504.05288 (2025) 17. Gemini Team, Anil, R., Borgeaud, S., Alayrac, J.B., Yu, J., Soricut, R., et al.: Gem-ini: A family of highly capable multimodal models. arXiv preprint arXiv:2312.11805 (2023) 18. Geng, X., Xia, P., Zhang, Z., Wang, X., Wang, Q., Ding, R., Wang, C., Wu, J., Zhao, Y., Li, K., Jiang, Y., Xie, P., Huang, F., Zhou, J.: Webwatcher: Breaking new frontier of vision-language deep research agent. arXiv preprint arXiv:2508.05748 (2025) 19. Goyal, Y., Khot, T., Summers-Stay, D., Batra, D., Parikh, D.: Making the v in VQA matter: Elevating the role of image understanding in visual question answering. In: CVPR (2017) 20. Green, D.M., Swets, J.A.: Signal Detection Theory and Psychophysics. John Wiley & Sons (1966) 21. Gu, J., Jiang, X., Shi, Z., Tan, H., Zhai, X., Xu, C., Li, W., Shen, Y., Ma, S., Liu, H., Wang, S., Zhang, K., Wang, Y., Gao, W., Ni, L., Guo, J.: A survey on LLM-as-a-judge. arXiv preprint arXiv:2411.15594 (2024) 22. Hu, Z., Iscen, A., Sun, C., Chang, K.W., Sun, Y., Ross, D.A., Schmid, C., Fathi, A.: AVIS: Autonomous visual information seeking with large language model agent. arXiv preprint arXiv:2306.08129 (2023) 23. Hudson, D.A., Manning, C.D.: GQA: A new dataset for real-world visual reasoning and compositional question answering. In: CVPR (2019) 24. Jiang, D., Zhang, R., Guo, Z., Wu, Y., Lei, J., Qiu, P., Lu, P., Chen, Z., Fu, C., Song, G., Gao, P., Liu, Y., Li, C., Li, H.: MMSearch: Benchmarking the potential of large models as multi-modal search engines. arXiv preprint arXiv:2409.12959 (2024) 25. Jin, B., Zeng, H., Yue, Z., Yoon, J., Arik, S., Wang, D., Zamani, H., Han, J.: Search-R1: Training LLMs to reason and leverage search engines with reinforce-ment learning (2025) 26. Johnson, J., Hariharan, B., van der Maaten, L., Fei-Fei, L., Zitnick, C.L., Girshick, R.: CLEVR: A diagnostic dataset for compositional language and elementary visual reasoning. In: CVPR (2017) 27. Johnson, M.K., Hashtroudi, S., Lindsay, D.S.: Source monitoring. Psychological Bulletin 114 (1), 3–28 (1993). https://doi.org/10.1037/0033-2909.114.1.3 
+
+28. Le, H., Wang, Y., Gotmare, A.D., Savarese, S., Hoi, S.C.H.: CodeRL: Master-ing code generation through pretrained models and deep reinforcement learning. In: Advances in Neural Information Processing Systems. vol. 35, pp. 21314–21328 (2022) Self-Verification via Reinforcement Learning 17 29. Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W.t., Rocktäschel, T., Riedel, S., Kiela, D.: Retrieval-augmented generation for knowledge-intensive NLP tasks. NeurIPS (2020), arXiv:2005.11401 30. Lightman, H., Kosaraju, V., Burda, Y., Edwards, H., Baker, B., Lee, T., Leike, J., Schulman, J., Sutskever, I., Cobbe, K.: Let’s verify step by step. arXiv preprint arXiv:2305.20050 (2023) 31. Liu, H., Li, C., Wu, Q., Lee, Y.J.: Visual instruction tuning. arXiv preprint arXiv:2304.08485 (2023) 32. Liu, Y., Iter, D., Xu, Y., Wang, S., Xu, R., Zhu, C.: G-Eval: NLG evaluation using GPT-4 with better human alignment. In: EMNLP (2023), arXiv:2303.16634 33. Liu, Z., Chen, C., Li, W., Qi, P., Pang, T., Du, C., Lee, W.S., Lin, M.: Un-derstanding R1-Zero-Like training: A critical perspective. In: COLM (2025), arXiv:2503.20783 34. Marino, K., Rastegari, M., Farhadi, A., Mottaghi, R.: OK-VQA: A visual ques-tion answering benchmark requiring external knowledge. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) (2019) 35. Narayan, K., Xu, Y., Cao, T., Nerella, K., Patel, V.M., Shiee, N., Grasch, P., Jia, C., Yang, Y., Gan, Z.: DeepMMSearch-R1: Empowering multimodal LLMs in multimodal web search. arXiv preprint arXiv:2510.12801 (2025) 36. Ouyang, L., Wu, J., Jiang, X., Almeida, D., Wainwright, C., Mishkin, P., Zhang, C., Agarwal, S., Slama, K., Ray, A., et al.: Training language models to follow instructions with human feedback. arXiv preprint arXiv:2203.02155 (2022) 37. Pirolli, P., Card, S.: Information foraging. Psychological Review 106 (4), 643–675 (1999). https://doi.org/10.1037/0033-295X.106.4.643 
+
+38. Rafailov, R., Sharma, A., Mitchell, E., Ermon, S., Manning, C.D., Finn, C.: Direct preference optimization: Your language model is secretly a reward model. arXiv preprint arXiv:2305.18290 (2023) 39. Rao, R.P.N., Gklezakos, D.C., Sathish, V.: Active predictive coding: A unifying neural model for active perception, compositional learning, and hierarchical plan-ning. Neural Computation 36 (1), 1–32 (2024). https://doi.org/10.1162/neco _a_01627 
+
+40. Russell, S.J., Wefald, E.H.: Do the Right Thing: Studies in Limited Rationality. MIT Press (1991) 41. Sarch, G., Saha, S., Khandelwal, N., Jain, A., Tarr, M.J., Kumar, A., Fragkiadaki, K.: Grounded reinforcement learning for visual reasoning. In: Advances in Neural Information Processing Systems 38 (NeurIPS 2025) (2025) 42. Schick, T., Dwivedi-Yu, J., Dessì, R., Raileanu, R., Lomeli, M., Zettlemoyer, L., Cancedda, N., Scialom, T.: Toolformer: Language models can teach themselves to use tools. arXiv preprint arXiv:2302.04761 (2023) 43. Schulman, J., Wolski, F., Dhariwal, P., Radford, A., Klimov, O.: Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 (2017) 44. Schwenk, D., Khandelwal, A., Clark, C., Marino, K., Mottaghi, R.: A-OKVQA: A benchmark for visual question answering using world knowledge. arXiv preprint arXiv:2206.01718 (2022) 45. Shao, Z., Wang, P., Zhu, Q., Xu, R., Song, J., Bi, X., Zhang, H., Zhang, M., Li, Y.K., Wu, Y., Guo, D.: DeepSeekMath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300 (2024) 46. Singh, A., Natarajan, V., Jiang, Y., Chen, X., Shah, M., Batra, D., Parikh, D., Rohrbach, M.: Towards VQA models that can read. In: CVPR (2019) 18 V. Sathish et al. 47. Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, L., Polosukhin, I.: Attention is all you need. In: NeurIPS. pp. 5998–6008 (2017) 48. Wang, X., Wei, J., Schuurmans, D., Le, Q., Chi, E., Narang, S., Chowdhery, A., Zhou, D.: Self-consistency improves chain of thought reasoning in language models. arXiv preprint arXiv:2203.11171 (2022) 49. Wei, J., Bosma, M., Zhao, V.Y., Guu, K., Yu, A.W., Lester, B., Du, N., Dai, A.M., Le, Q.V.: Finetuned language models are zero-shot learners. arXiv preprint arXiv:2109.01652 (2022) 50. Wei, J., Wang, X., Schuurmans, D., Bosma, M., Ichter, B., Xia, F., Chi, E.H., Le, Q.V., Zhou, D.: Chain-of-thought prompting elicits reasoning in large language models. NeurIPS (2022), arXiv:2201.11903 51. Wu, J., Deng, Z., Li, W., Liu, Y., You, B., Li, B., Ma, Z.: Mmsearch-r1: Multimodal search with reinforcement learning. Blog post (2025), https://www.lmms-lab.co m/posts/mmsearch_r1/ , accessed: 01 March 2026 52. Wu, J., Deng, Z., Li, W., Liu, Y., You, B., Li, B., Ma, Z., Liu, Z.: MMSearch-R1: Incentivizing LMMs to search. arXiv preprint arXiv:2506.20670 (2025) 53. Wu, P., Xie, S.: V*: Guided visual search as a core mechanism in multimodal LLMs. arXiv preprint arXiv:2312.14135 (2023) 54. Xie, Y., Kawaguchi, K., Zhao, Y., Zhao, J.X., Kan, M.Y., He, J., Xie, M.Q.: Self-evaluation guided beam search for reasoning. In: Advances in Neural Information Processing Systems 36 (NeurIPS 2023) (2023) 55. Yao, S., Yu, D., Zhao, J., Shafran, I., Griffiths, T.L., Cao, Y., Narasimhan, K.: Tree of thoughts: Deliberate problem solving with large language models. arXiv preprint arXiv:2305.10601 (2023) 56. Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., Cao, Y.: ReAct: Syn-ergizing reasoning and acting in language models. arXiv preprint arXiv:2210.03629 (2022) 57. Yu, Q., Zhang, Z., Zhu, R., Yuan, Y., Zuo, X., Yue, Y., et al.: DAPO: An open-source LLM reinforcement learning system at scale. arXiv preprint arXiv:2503.14476 (2025) 58. Yuan, L., Li, W., Chen, H., Cui, G., Ding, N., Zhang, K., Zhou, B., Liu, Z., Peng, H.: Free process rewards without process labels. arXiv preprint arXiv:2412.01981 (2024) 59. Zheng, L., Chiang, W.L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z., Li, D., Xing, E.P., Zhang, H., Gonzalez, J.E., Stoica, I.: Judging LLM-as-a-judge with MT-Bench and chatbot arena. arXiv preprint arXiv:2306.05685 (2023) 60. Ziegler, D.M., Stiennon, N., Wu, J., Brown, T.B., Radford, A., Amodei, D., Chris-tiano, P.F., Irving, G.: Fine-tuning language models from human preferences. arXiv preprint arXiv:1909.08593 (2019)

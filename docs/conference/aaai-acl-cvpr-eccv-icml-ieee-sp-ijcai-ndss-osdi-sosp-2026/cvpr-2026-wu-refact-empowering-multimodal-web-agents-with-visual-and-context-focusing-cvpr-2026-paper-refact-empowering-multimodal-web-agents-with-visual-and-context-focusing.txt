@@ -1,0 +1,1127 @@
+ReFAct: Empowering Multimodal Web Agents with Visual and Context Focusing
+Rui Wu*
+Shuo Zhang*
+Xiaoxuan Tang
+Ruirui Zhang
+Yi Liu
+Tao Jiang
+Wenhao Xu
+Yong Li†
+Ant Group
+{guli.wr, suzhang.zs, tangxianxuan.txx, zhangruirui.zrr, ly513375}@antgroup.com
+{tara.ht, hao.xuwh, liyong.liy}@antgroup.com
+Abstract
+Multimodal Web Search Agents demonstrate a practically
+valuable capability by fusing information from diverse
+modalities (e.g., text and vision), retrieved iteratively from
+the internet, to address complex user queries. However, the
+visual modality is prone to information overload, and the
+noise contained within it—such as irrelevant background
+details or complex structures—can disrupt the model’s at-
+tention, misdirecting its operational focus toward an er-
+roneous path.
+To address the aforementioned challenge,
+we propose ReFAct (Reasoning, Focusing, and Acting), a
+novel framework that empowers the agent to actively man-
+age its cross-modal context. This allows the agent to adjust
+its operational focus, thereby mitigating the impact of noise
+on multimodal Web Search Agents.
+Specifically, ReFAct
+employs a Grounding tool for active visual perception to
+dynamically filter information.
+We also design external
+memory-based Defocus/Refocus operations for selective in-
+formation retention, further modulating information density
+within the multimodal context. Ultimately, this ensures the
+agent maintains focus during problem-solving. To evaluate
+and enhance agent capabilities in complex and noisy multi-
+modal contexts, we first propose a pipeline for constructing
+datasets with flexible complexity. We introduce a new open-
+source benchmark: GroundedVQA. Finally, we experimen-
+tally demonstrate the effectiveness of our proposed method
+on GroundedVQA and other widely-used benchmarks.
+1. Introduction
+Text-centric Web Search Agents, such as Search-R1 [8],
+R1-Searcher [17] and DeepResearcher [23], have demon-
+strated significant success in information gathering for com-
+plex problems. By iteratively performing model inference
+and web searches, these agents amass sufficient informa-
+*Equal contribution
+†Corresponding author
+Who is the
+designer of the
+building in this
+picture?
+The Galata Tower is
+reflected  in the view from
+the window. As far as I
+know, the designer of the
+Galata Tower is unknown.
+<tool> Image Search </tool>
+<tool> Text Search </tool>
+Search:  Designer of Tower of David
+The Tower of David is a historical citadel
+in Jerusalem's Old City. It has no single
+designer.
+Direct Answer
+Web Agent
+<reason> I need to search to confirm
+which building this is </reason>
+<reason> The building is Tower of
+David according to the search results.
+Now I need to search to confirm the
+designer </reason>
+.......
+Reliance on Parametric
+Knowledge, Lack of Retrieval
+leads to Hallucination.
+Image Noise causes Retrieval
+Errors, introducing a False
+Factual Basis
+Figure 1. Illustration of how visual noise leads to failure in both
+direct-answer models and standard web search agents. Given a
+query about a building in an image , the direct-answer model
+(left) hallucinates an incorrect building. The standard Web Search
+Agent (right) is similarly misled by the visual noise; its image
+search incorrectly identifies the building, establishing a false fac-
+tual basis that derails the subsequent reasoning process.
+tion to fulfill user requests, thereby mitigating the inherent
+latency of Large Language Models(LLMs) in adapting to
+dynamic, real-world information.
+However, the real world is filled with information from
+modalities other than text. Users often pose queries based
+on visual information, making multimodal capabilities cru-
+cially important and indispensable for Web Search Agents.
+Recent work has already begun to investigate multimodal
+Web Search Agents. For instance, MMSearch-R1 [19] in-
+troduced the first end-to-end reinforcement learning frame-
+work for multimodal agents with image search capabilities,
+while WebWatcher [4] further extended this with complex
+tools like webpage access and OCR.
+Despite these advances, multimodal capabilities intro-
+duce a severe challenge: high susceptibility to contextual
+noise. When processing images, irrelevant backgrounds and
+This CVPR paper is the Open Access version, provided by the Computer Vision Foundation.
+Except for this watermark, it is identical to the accepted version;
+the final published version of the proceedings is available on IEEE Xplore.
+14990
+
+
+complex textures often act as “visual noise”, which can dis-
+tract the model’s attention. For instance, as illustrated in
+Fig. 1, irrelevant buildings visible outside a window may er-
+roneously shift the model’s focus. This distraction can sub-
+sequently lead to incorrect initial search queries [18] and the
+establishment of “false factual bases”. Furthermore, agents
+must contend with “retrieval noise” originating from non-
+essential webpage elements, such as advertisements and
+navigation bars. This extraneous information not only di-
+lutes critical data but can also severely impede the model’s
+final reasoning process [6]. This highlights a pressing need
+for multimodal Web Search Agents capable of actively and
+comprehensively filtering this pervasive, irrelevant context.
+To address this challenge, we argue that agents must pos-
+sess active, cross-modal context management capabilities.
+To this end, we introduce ReFAct (Reasoning, Focusing,
+and Acting), a novel architecture that unifies information
+filtering through a central concept of “focusing” to dynam-
+ically adjust its attention across modalities. Specifically, to
+combat visual noise, we first introduce a Grounding tool,
+enabling the agent to actively visual focus on high-relevance
+image regions rather than passively observing the entire
+scene. Second, to manage retrieval noise, we introduce De-
+focus and Refocus tools. When the context becomes clut-
+tered, the agent can actively call Defocus to condense infor-
+mation into an external memory module. Conversely, when
+previously stored details become relevant, it can call Refo-
+cus to retrieve them. This mechanism achieves a flexible,
+active management of the agent’s working memory. Our
+main contributions are summarized as follows:
+• ReFAct Framework: We design ReFAct, a novel frame-
+work that endows agents with multi-faceted context man-
+agement capabilities through the synergy of active visual
+Grounding and selective memory (Defocus/Refocus) op-
+erations.
+• GroundedVQA Dataset: We construct GroundedVQA,
+a dataset containing 1817 complex Visual Question An-
+swering (VQA) data points. It serves a dual purpose: as
+a training resource for teaching active tool use, and as
+a rigorous benchmark for evaluating agent robustness in
+high-noise environments.
+• Performance Improvement We train the ReFAct-7B
+model via Reinforcement Learning.
+Experimental re-
+sults demonstrate that ReFAct-7B decisively outper-
+forms state-of-the-art RL-trained agents on the high-noise
+GroundedVQA benchmark while maintaining strong
+adaptability on low-noise tasks.
+2. Related Work
+2.1. Multimodal LLMs
+Multimodal Large Language Models (MLLMs) have
+emerged as a dominant paradigm for general-purpose vi-
+sual understanding. By bridging powerful visual encoders
+(e.g., CLIP[15], SigLIP[21]) with large language models
+[10, 11, 22], MLLMs such as GPT-5 [14], Gemini [5], and
+the Qwen-VL series [1] have demonstrated remarkable ca-
+pabilities in tasks ranging from visual captioning to com-
+plex reasoning. Despite their success on static benchmarks,
+standard MLLMs face two critical limitations when applied
+to real-world scenarios. First, they operate under a closed-
+world assumption, relying solely on parametric knowledge
+that quickly becomes outdated, rendering them unsuitable
+for dynamic information seeking. Second, they typically
+employ a passive perception mechanism, where the entire
+image is encoded into visual tokens regardless of task rele-
+vance. In highly cluttered realistic environments (e.g., com-
+plex web pages), this leads to severe attention dilution and
+increased hallucination [18], as the model struggles to dis-
+tinguish core evidence from background noise.
+2.2. Multimodal Web Search Agents
+To address the static knowledge limitation, recent research
+has focused on developing Web Search Agents capable
+of autonomous information gathering. Early efforts were
+predominantly text-centric.
+Search-R1 [8] and DeepRe-
+searcher [23] successfully integrated LLMs with search en-
+gine APIs, employing iterative “Reason-then-Act” loops to
+solve complex textual queries. Recognizing that the real
+web is inherently visual, the field is rapidly shifting towards
+Multimodal Web Search Agents. Pioneering works such
+as WebWatcher [4] and MMSearch-R1 [19] have equipped
+MLLMs with tools to search rich web environments, per-
+forming actions like image searching and webpage retrieval.
+However, these multimodal agents largely inherit the
+passive perception limitation of their base MLLMs. They
+typically process raw, full-page screenshots or complete
+search result pages. As highlighted by recent studies [6, 18],
+this includes both visual noise (e.g., irrelevant backgrounds,
+complex textures) and retrieval noise (e.g., advertisements,
+navigation bars) from raw webpages. This passive intake
+can establish a “false factual basis” from images or cause
+the agent to be “drowned” in irrelevant text during reason-
+ing. GUI agents such as GUI-R1 [12] target action execu-
+tion (e.g., clicking, navigation), a different paradigm from
+our retrieval and reasoning focus. In contrast, our ReFAct
+framework actively manages cross-modal context: counter-
+ing visual noise via an active Grounding tool, and manag-
+ing retrieval noise through Defocus/Refocus operations for
+selective working memory control, which are absent in ex-
+isting agents.
+3. Methodology
+In this section, we present the ReFAct framework, a novel
+paradigm designed to equip multimodal web search agents
+with active context management capabilities. By unifying
+14991
+
+
+information filtering through a central concept of “active fo-
+cusing”, ReFAct addresses the critical challenges of visual
+and retrieval noise that plague existing agents.
+3.1. The ReFAct Framework
+We formalize the agent’s interaction with the multimodal
+web environment as a sequential decision-making process.
+At each step t, the agent observes a state ot and maintains
+a context history Ht. Unlike standard agents that passively
+accumulate all observations into Ht, ReFAct empowers the
+agent to actively curate its context through explicit Focusing
+actions. This expands the traditional action space to include
+actively managing both visual attention and working mem-
+ory load.
+Visual Focusing. To combat visual noise arising from com-
+plex backgrounds that often mislead image retrieval sys-
+tems, ReFAct introduces an active Grounding mechanism.
+Instead of passively using entire images for search queries,
+the agent can explicitly select high-relevance regions.
+Specifically, before executing an image-based search, the
+agent can generate a grounding action Ground(It, bbox),
+where bbox = [x1, y1, x2, y2] specifies the target crop co-
+ordinates. The environment then uses this cropped region
+It[bbox] as the precise query for subsequent retrieval tools
+(e.g., reverse image search). Crucially, by having the agent
+directly predict bounding boxes, we avoid introducing ex-
+ternal biases from third-party detection models and allow
+the grounding capability to be jointly optimized with the
+agent’s reasoning process during training.
+Memory Focusing. To effectively manage retrieval noise
+from cluttered webpages and prevent context exhaustion
+over long horizons, ReFAct implements a dual-memory sys-
+tem. We distinguish between a limited, high-value active
+working memory (Ht) and an unlimited external memory
+(Mt). Two complementary tools govern the flow between
+them:
+• Defocus: When the agent encounters information-dense
+but currently non-critical content (e.g., full text of a
+lengthy article), it can actively defocus. This action of-
+floads the raw content to Mt while retaining only a con-
+cise, evidence-bearing summary and a unique reference
+ID in Ht, keeping the context clean for immediate rea-
+soning.
+• Refocus:
+Conversely, when subsequent reasoning re-
+quires details previously offloaded, the agent can exe-
+cute Refocus(id). By referencing the specific ID from
+the summary in Ht, it precisely retrieves the original raw
+content from Mt, avoiding vague or error-prone fuzzy re-
+trieval.
+Integrated Active Reasoning Loop. ReFAct unifies these
+capabilities into a cohesive Reasoning, Focusing, and Act-
+ing cycle. In each turn, the agent generates a thought rt to
+<img_search>{"bbox_2d": [204, 460, 473, 733]} </img_search>
+<reason> I need to perform retrieval and analysis on the
+architectural area within the image to acquire relevant
+information and ultimately determine the identity of the
+building's designer. </reason>
+Visual
+Focus
+Search
+A comprehensive collection of
+retrieved images and their
+corresponding descriptive data,
+which take up a lot of tokens.
+Auto Defocus
+DB
+The building is the monument to Alexander Kazarsky (1797-1833).
+Russian captain of the brig Mercury.
+Store the original 
+search results
+Summarize the key conclusions
+What other well-known buildings were also
+designed by the architect of the building in
+the image?
+<reason> I need to identify the designer of the Monument to
+Alexander Kazarsky. </reason>
+< Metadata for historical search results>
+......
+<reason> The building was not designed by a single individual. 
+Re-examine the previously obtained retrieval results. </reason>
+<refocus> step_1 </refocus>
+......
+Figure 2. An illustration of the ReFAct agent’s core focusing op-
+erations, showing how it uses Visual Focus (grounding) to identify
+a target, Defocus to offload large results to an external database,
+and Refocus to retrieve specific details when needed
+autonomously decide its next move, seamlessly interleaving
+standard web actions with internal focusing operations. The
+overall process is depicted in Fig. 2. A typical trajectory τ
+demonstrates this synergy:
+  \be gin { a l ign ed} \tau = (& q, I_0, \dots , r
+_ t , Groun d(bbox), Img Search( I_{crop}), \\ &\dots , r_{t+k}, Refocus(id), r_{t+k+1}, Answer) \end {aligned} 
+(1)
+This integrated loop ensures that every external action is
+based on actively curated, noise-reduced inputs, signifi-
+cantly enhancing robustness in complex scenarios.
+3.2. Proposed Dataset: GroundedVQA
+Existing
+knowledge-based
+VQA
+datasets
+(e.g.,
+OK-
+VQA[13], A-OKVQA[16]) predominantly feature images
+with simple compositions, where target entities are highly
+salient, allowing agents to retrieve relevant knowledge
+through whole-image search without deeper visual under-
+standing. However, in real-world scenarios, target entities
+often occupy small regions amidst significant visual noise,
+causing global image search to return irrelevant results and
+leading to reasoning failures.
+14992
+
+
+Level-1
+Level-2
+Who is the person on the far right?
+How many total gold medals has the person on the far right won?
+What is the relationship between the two people on the far right?
+When was the most recent meeting between the national leaders of
+the two countries represented by the two people on the far right?
+Grounding
+Knowledge     Augmentation
+Image
+ Search
+Lim Jong-hoon (Korean: 임종훈, born 21
+January 1997) is a South Korean table
+tennis player.
+Root
+Grounded
+Entity
+Retrieved 
+Entity
+KG  Construction
+Sampling
+Level -1
+Level -2
+Text
+ Search
+South Korean table tennis star Lim
+Jong-hoon win against Hong Kong
+Human Check
+1. Is the question answerable?
+2. Is the question too simple to
+require grounding?
+GroundedVQA
+(Test)
+GroundedVQA
+(Train)
+Rule filtering
+Reject Sampling
+Figure 3. The GroundedVQA data construction pipeline. We first locate valuable regions, then extract entities and facts via search engines
+and model analysis to build a image-knowledge graph. Finally, we sample from this graph to generate VQA data of varying difficulty.
+To address this limitation, we introduce GroundedVQA,
+a dataset designed for both training and evaluating agents in
+high-noise visual environments. The distinguishing feature
+of GroundedVQA is the mandatory requirement for visual
+grounding: questions are constructed such that they can-
+not be answered without first precisely localizing the rele-
+vant image regions. This design not only provides a rigor-
+ous benchmark for evaluating noise-filtering capabilities but
+also serves as a high-quality supervision source for training
+agents with active grounding skills.
+To advance agents’ capabilities from basic entity ground-
+ing to complex relational reasoning, GroundedVQA is
+structured into two progressive difficulty levels:
+Level 1: Focused Entity Reasoning. This level targets sin-
+gle, non-salient entities in cluttered scenes. Successfully
+answering these questions requires an effective composition
+of perception, retrieval, and reasoning:
+1. Visual Grounding: The agent must localize the specific
+target entity referenced in the question (e.g., a small logo
+on a product) amidst visual noise.
+2. Precise Identification: Using the localized region as a
+query, the agent must identify the entity’s fine-grained
+category or specific model via image retrieval tools.
+3. Knowledge Reasoning: The agent must use the identi-
+fied entity name to query external knowledge bases and
+derive the final answer.
+Level 2: Cross-Entity Relational Reasoning. This level
+increases complexity by requiring integrated reasoning
+across multiple entities and diverse information sources:
+1. Multi-Target Grounding: Localizing multiple distinct
+entities mentioned or implied within the query.
+2. Sequential Retrieval: Information must be retrieved
+for each entity independently. This often necessitates
+managing multiple retrieval contexts, potentially invok-
+ing memory focusing mechanisms (Defocus/Refocus) to
+avoid information overload.
+3. Associative Reasoning: The final answer requires syn-
+thesizing retrieved facts across entities, such as compar-
+ing attributes (e.g., “Which of the two identified cars has
+a higher top speed?”) or discovering latent relationships.
+3.2.1. Construction Pipeline
+To generate high-quality data that mandates visual ground-
+ing, we designed a Region-based VQA Pipeline following a
+“Construct-then-Sample” paradigm, which is visually out-
+lined in Fig. 3. Leveraging the high-resolution and clutter-
+rich scenes sampled from the SA-1B dataset[9], we first
+construct a fine-grained “Image-Knowledge Graph”(i.e., an
+image-centric knowledge graph) for each image. We then
+sample subgraphs from this knowledge graph to automati-
+cally generate Level 1 and Level 2 QA pairs.
+Phase I: Image-Knowledge Graph Construction The in-
+put image I serves as the root node of the knowledge graph
+GI. We first employ Qwen3-VL-235B-A22B-Instruct to
+detect candidate entities E = {e1, ..., eK} (e.g., logos,
+landmarks) and generate a visual description vi for each ei.
+Subsequently, each candidate entity ei is subjected to im-
+age retrieval via the Google Serper API, yielding the top-10
+results (image thumbnails and titles). To verify each can-
+14993
+
+
+didate, Qwen3-VL is again employed to analyze these re-
+trieved results against the original ei. We apply a stringent
+filtering process, retaining only entities identified with high
+certainty and discarding all ambiguous results. These suc-
+cessfully verified entities are termed Grounded Entities,
+and their determined identity is si. These Grounded Enti-
+ties are then connected to the root node I.The relationship
+edge is populated with the visual description vi generated
+during the initial detection step, representing the entity’s vi-
+sual context within the image. In the next step, the textual
+identity si of each Grounded Entity is used as a query for
+the Google Search engine to retrieve external facts. We em-
+ploy Jina Reader to parse the content of the top-5 returned
+URLs, ensuring high-quality content extraction. This re-
+trieved text is analyzed by an LLM to extract new entities,
+termed Retrieved Entities, and to establish the semantic
+relationships linking them to their corresponding Grounded
+Entities. This expansion process is executed iteratively. In
+each subsequent hop, a subset of newly discovered nodes
+(e.g., Retrieved Entities) is randomly selected for further
+expansion using the text-based retrieval and fact extraction
+protocol. This iterative methodology enables the progres-
+sive construction of a comprehensive knowledge graph GI
+derived from the initial image.
+Phase II: QA Generation.
+We sample subgraphs from
+GI and employ an LLM to convert them into QA pairs.
+For Level 1, we sample a subgraph comprising a single
+Grounded Entity, its associated external facts, and its cor-
+responding visual description(e.g., “the phone in the upper
+left corner”). For Level 2, we sample subgraphs involving
+multiple Grounded Entities, their respective facts, and their
+visual descriptions, enabling the synthesis of questions that
+require comparative or associative reasoning. These sam-
+pled subgraphs, crucially including the visual descriptions,
+are then fed into an LLM. The model is prompted to gen-
+erate a multi-hop question that anchors the query to the en-
+tity’s visual description . The corresponding answer is syn-
+thesized from the retrieved facts. This process ensures the
+generated pairs are inherently visual, linking specific visual
+context to external knowledge.
+Phase III: Hybrid Verification. The generated data is split
+into Training and Evaluation sets with distinct protocols.
+For the training set, we prioritize scalability and retrieval-
+necessity. We implement an automated rejection sampling
+protocol using Qwen-2.5VL-32B. Specifically, each gener-
+ated question is fed to this model without its correspond-
+ing image.
+If the model can answer the question cor-
+rectly based solely on its internal parametric knowledge,
+the sample is discarded.
+This strategy filters out trivial
+questions where the grounding-retrieval mechanism is re-
+dundant. Conversely, the Evaluation Set undergoes rigor-
+ous human verification. Verifiers explicitly discard “short-
+Table 1. Comparison of GroundedVQA with existing VQA bench-
+marks. GroundedVQA uniquely combines high visual noise with
+mandatory external knowledge retrieval.
+Dataset
+External
+Knowledge
+Visual
+Grounding
+Noise
+Level
+SimpleVQA [2]
+✓
+×
+Low
+MMSearch [7]
+✓
+×
+Low
+LiveVQA [3]
+✓
+×
+Low
+GroundedVQA
+✓
+✓
+High
+cut” questions solvable via global image heuristics, retain-
+ing only those strictly requiring the full ground-retrieval-
+reasoning chain to ensure benchmark hardness.
+3.2.2. Dataset Statistics and Analysis
+We present a statistical analysis to highlight the distinguish-
+ing features of GroundedVQA. Through our data curation
+pipeline, we have compiled 1,200 Level 1 and 300 Level 2
+instances for training, complemented by 261 Level 1 and 56
+Level 2 instances for the benchmark evaluation.
+As shown in Tab. 1, GroundedVQA is unique among
+existing benchmarks in simultaneously demanding exter-
+nal knowledge retrieval and active visual grounding under
+high-noise conditions. Fig. 4(a) provides quantitative ev-
+idence for this ”high-noise” nature: the spatial occupancy
+of our target entities is heavily skewed towards small ratios
+(< 0.2), presenting a significantly greater challenge in vi-
+sual filtering compared to traditional VQA datasets. Fur-
+thermore, GroundedVQA ensures comprehensive evalua-
+tion through diverse difficulty levels (Fig. 4(b)) and a broad
+coverage of open-world domains (Fig. 4(c)).
+3.3. Reinforcement Learning
+We develop ReFAct-7B using an end-to-end Reinforcement
+Learning (RL) stage, specifically designed to instill active
+focusing strategies directly from environmental feedback.
+It is worth noting that while our framework supports both
+visual and memory focusing, our training phase primarily
+targets active visual grounding. We prioritize this because
+overcoming visual noise represents a more critical and fun-
+damentally missing capability in current MLLMs. Further-
+more, stabilizing RL training with highly dynamic context
+changes (introduced by Defocus/Refocus) remains an open
+challenge, so we focus our optimization resources on the
+most impactful visual modality.
+We employ GRPO to enable the model to emerge with
+optimal grounding strategies (e.g., learning when cropping
+is necessary vs. redundant). GRPO is particularly suitable
+for training large multimodal models as it estimates base-
+lines from a group of sampled trajectories for the same in-
+put, eliminating the need for a separate, memory-intensive
+14994
+
+
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Ratio of Target Entity Area to Total Image Area
+0
+2
+4
+6
+8
+10
+Density
+High Noise
+(Small Targets)
+(a) Visual Noise Comparison
+GroundedVQA (Ours)
+Typical VQA (LiveVQA)
+Level 1
+Level 2
+(b) Difficulty Levels & Reasoning Types
+Reasoning Types
+Identification
+Attribute
+Comparison
+Spatial/Relation
+Logical
+Number of Questions
+Plants & Animals
+Others
+Cars
+Daily Products
+Landmarks & Places
+7.0%
+10.2%
+19.5%
+23.6%
+39.6%
+(c) Knowledge Domain Distribution
+Figure 4. Statistical overview of the GroundedVQA benchmark. (a) Target spatial occupancy comparison. Our dataset (red) is heavily
+skewed towards small target ratios (< 0.2), verifying its high-noise nature compared to traditional datasets (blue). (b) Hierarchical
+distribution of difficulty levels and reasoning types, showing a diverse distribution challenges. (c) Domain distribution covering a wide
+range of open-world topics.
+critic model. Formally, for each query q and image I, we
+sample a group of G trajectories {τ1, τ2, . . . , τG} from the
+current policy πθ. The objective is to maximize:
+  \b egin {spl
+i
+t
+}
+ 
+\
+mat
+hcal {J} _{
+GRPO}(\thet a 
+) =
+ 
+\mathbb {E}_{q \sim D} \left [ \frac {1}{G} \sum _{i=1}^{G} \frac {\pi _\theta (\tau _i|q, I)}{\pi _{\theta _{old}}(\tau _i|q, I)} \hat {A}_i \right ] \\ - \beta \mathbb {D}_{KL}(\pi _\theta || \pi _{ref}) \end {split} 
+(2)
+The advantage ˆAi is calculated using group-relative normal-
+ization of rewards:
+  \ h at {A } _i = \frac {R
+(\ta
+u _i) - \tex
+t {m e an}(\{R(\tau _j)\}_{j=1}^G)}{\text {std}(\{R(\tau _j)\}_{j=1}^G) + \epsilon } 
+(3)
+To guide the policy optimization, we design a composite
+reward mechanism consisting of two distinct signals:
+• Correctness Reward (racc): Given the potential stylistic
+variations in open-ended answers, we employ an LLM-
+as-a-Judge mechanism rather than rigid string matching.
+A judge model evaluates whether the predicted answer is
+semantically equivalent to the ground truth. This sparse
+outcome signal implicitly incentivizes the emergence of
+effective intermediate grounding actions that enable suc-
+cessful retrieval.
+• Format Reward (rfmt): A constraint term that penalizes
+invalid tool calls or malformed bounding boxes, ensuring
+the executable stability of the action space.
+Finally, the total reward function R(τ) is defined as a
+weighted sum of these components:
+  R( \ ta u ) = ( 1 - \lambda )r_{\text {acc}} + \lambda r_{\text {fmt}} 
+(4)
+where λ is a coefficient balancing reasoning accuracy and
+instruction compliance.
+4. Experiments
+4.1. Experimental Setup
+Implementation Details.
+We utilize Qwen2.5-VL-7B-
+Instruct as our base model. The model is trained using the
+GRPO algorithm to optimize active focusing strategies. For
+both correctness reward calculation and benchmark evalu-
+ation, we employed the LLM-as-a-judge approach, specifi-
+cally utilizing the Gemini-2.5-pro model. The training cor-
+pus is composed of the proposed GroundedVQA training
+set, combined with 3,000 items randomly sampled from
+the FVQA training set. The RL stage was conducted for
+2 epochs with a learning rate of 2e −6, a KL coefficient
+β = 0.01, λ = 0.1 and a group size G = 8. All models
+were trained on 8×A100 GPUs. All prompts employed are
+available in the Appendix.
+Baselines. To comprehensively evaluate the effectiveness
+of both our proposed architecture and the trained model, we
+categorize our comparisons into four distinct groups:
+• Vanilla ReAct Baselines:
+We utilize standard open-
+source models (e.g., Qwen2.5-VL-7B) equipped with
+web tools following the classic ReAct[20] paradigm. This
+serves as the fundamental baseline to assess base model
+capabilities without specialized training or architecture.
+• ReFAct Architecture Validation: To isolate the contri-
+bution of our proposed architecture, we equip standard
+vanilla models (from the first category) with our ReFAct
+framework. This comparison directly validates the archi-
+tectural superiority of ReFAct over ReAct.
+• RL-Trained Web Search Agents: We include state-
+of-the-art open-source agents trained via reinforcement
+learning. These represent the strongest open-source base-
+lines for multimodal web search tasks and provide a direct
+comparison to our trained ReFAct-7B model.
+• Closed-source Models:
+We also include top closed-
+source models (GPT-5-mini, Gemini-2.5-flash) as upper-
+bound references for current general capabilities.
+Benchmarks. We utilize a diverse set of benchmarks to
+evaluate different agent capabilities:
+• GroundedVQA-Test: Our proposed benchmark, featur-
+ing high visual noise and complex multi-step reasoning,
+serving as the primary in-domain evaluation.
+14995
+
+
+Table 2. Model Performance Comparison on Various Benchmarks
+Model
+Source
+GroundedVQA
+MMSearch
+SimpleVQA
+LiveVQA
+Average
+Level-1
+Level-2
+ReAct
+Qwen2.5-VL-7B
+Open
+0.061
+0.036
+0.140
+0.365
+0.136
+0.148
+Qwen2.5-VL-32B
+Open
+0.084
+0.074
+0.456
+0.489
+0.220
+0.265
+Qwen2.5-VL-72B
+Open
+0.203
+0.143
+0.444
+0.594
+0.310
+0.339
+GPT-5-mini
+Closed
+0.211
+0.180
+0.584
+0.632
+0.396
+0.401
+Gemini-2.5-flash
+Closed
+0.282
+0.267
+0.660
+0.725
+0.435
+0.473
+ReFAct
+Qwen2.5-VL-7B
+Open
+0.072
+0.107
+0.181
+0.375
+0.074
+0.162
+Qwen2.5-VL-32B
+Open
+0.218
+0.161
+0.417
+0.438
+0.148
+0.276
+Qwen2.5-VL-72B
+Open
+0.314
+0.214
+0.409
+0.527
+0.206
+0.334
+GPT-5-mini
+Closed
+0.226
+0.161
+0.514
+0.606
+0.360
+0.373
+Gemini-2.5-flash
+Closed
+0.306
+0.285
+0.444
+0.595
+0.256
+0.377
+RL-Trained Agents
+DeepEyes [24]
+Open
+0.184
+0.179
+0.281
+0.463
+0.168
+0.255
+WebWatcher [4]
+Open
+0.372
+0.232
+0.491
+0.543
+0.512
+0.430
+MMSearch-R1 [19]
+Open
+0.433
+0.304
+0.538
+0.574
+0.484
+0.467
+ReFAct-7B
+Open
+0.513
+0.375
+0.497
+0.616
+0.300
+0.460
+• MMSearch[7]: A comprehensive evaluation benchmark
+to assess the multimodal search performance of MLLMs.
+• LiveVQA-new[3]: The first dataset specifically designed
+to test how MLLMs handle visual information beyond
+their training data cutoff.
+• SimpleVQA[2]: The first comprehensive multi-modal
+benchmark to evaluate the factuality ability of MLLMs
+to answer natural language short questions.
+Metric. Following standard practices, we adopt the pass@k
+metric as our primary metric. In our experiments, we re-
+port pass@1, which represents the percentage of problems
+solved correctly in a single attempt. We utilize an LLM-
+as-Judge framework to determine the correctness of a gen-
+erated solution. Specifically, pass@1 is computed as the
+proportion of problems that are successfully solved across
+the entire dataset.
+4.2. Main Results
+Tab. 2 presents the comparative performance across all
+benchmarks.
+Among RL-trained open-source agents,
+ReFAct-7B achieves decisive gains on the high-noise
+GroundedVQA while maintaining strong adaptability on
+low-noise benchmarks like SimpleVQA, demonstrating that
+it does not over-process when explicit grounding is un-
+necessary. However, its performance on general-purpose
+benchmarks (e.g., SimpleVQA, LiveVQA) lags behind top
+closed-source models like Gemini-2.5-flash. This discrep-
+ancy reveals an inherent trade-off of the active visual fo-
+cusing mechanism: while localizing regions effectively fil-
+ters noise on GroundedVQA, tasks like LiveVQA require
+holistic image comprehension to construct accurate retrieval
+queries. The region-level focus of the Grounding tool may
+reduce search query richness, leading to suboptimal re-
+trieval on benchmarks where fine-grained grounding is un-
+necessary.
+A deeper analysis of the plug-and-play application of our
+framework (models without RL training) reveals that its ef-
+fectiveness is highly dependent on the base model’s intrinsic
+capabilities. The ReFAct framework yields significant im-
+provements for the Qwen series models; for instance, apply-
+ing it to Qwen2.5-VL-72B provides a +0.111 absolute gain
+on GroundedVQA Level-1. In sharp contrast, the frame-
+work offers negligible or even negative gains for the eval-
+uated closed-source models (Gemini-2.5-flash and GPT-5-
+mini). We hypothesize this is because ReFAct leverages a
+model’s existing grounding ability. The Qwen series, pos-
+sessing strong base visual grounding, can successfully use
+the tool to filter noise. Conversely, models with weaker in-
+nate grounding fail to focus on the correct region, rendering
+the active focusing mechanism ineffective.
+4.3. Robustness to Visual Noise
+To explicitly evaluate the resilience of different agents
+against visual noise, we stratify the GroundedVQA test set
+14996
+
+
+<5%
+5%-10%
+>10%
+Target Spatial Ratio (Visual Noise Level)
+0
+10
+20
+30
+40
+50
+60
+70
+80
+Accuracy (%)
+High Noise
++6.3%
+Gap
+ReFAct-7B (Ours)
+Qwen2.5-VL-7B (Base)
+MMSearch-R1
+Figure 5. Robustness to visual noise on GroundedVQA. While
+baselines (gray/blue) degrade rapidly as targets become smaller
+(higher noise), ReFAct-7B (red) maintains superior robustness,
+achieving a +6.3% gain in the extreme noise regime.
+based on the target entity’s spatial ratio. A smaller ratio in-
+dicates a higher degree of visual noise, as the target is more
+easily overwhelmed by cluttered backgrounds.
+Fig. 5 visualizes the performance trends across these
+stratified noise regimes.
+We observe that the perfor-
+mance of standard agents is highly sensitive to visual
+noise. The Qwen2.5-VL-7B baseline (gray) struggles sig-
+nificantly, with its accuracy remaining below 15% across
+all bins and dropping to its lowest point in the extreme noise
+regime (target ratio < 5%). While the stronger MMSearch-
+R1 model (blue) performs well in the 5%-10% ratio bin, its
+accuracy also degrades significantly when moving to the ex-
+treme noise regime. This confirms that both baselines fail
+when targets become highly non-salient.
+In contrast, our ReFAct-7B maintains substantially more
+robust performance in these highly cluttered scenarios. It
+achieves a +6.3% absolute accuracy gain over MMSearch-
+R1 in the extreme noise regime.
+This performance gap
+empirically validates that our active Ground mechanism
+effectively filters visual noise from complex scenes, trans-
+forming difficult small-target identification tasks into solv-
+able, focused sub-problems.
+4.4. Ablation Analysis
+To deconstruct the sources of our performance gains, we
+conduct comprehensive ablation studies, with results pre-
+sented in Tab. 3.
+Importance of GroundedVQA Data. We trained a vari-
+ant using only general VQA data for RL, excluding our
+GroundedVQA dataset.
+This led to a significant perfor-
+mance drop of 8.0% on Level-1 and 7.1% on Level-2. Qual-
+itative analysis reveals that without the dense, noise-laden
+scenarios from GroundedVQA during training, the agent
+fails to learn the optimal policy for when to trigger active
+grounding, often reverting to passive observation.
+Table 3. Ablation Analysis on GroundedVQA. We report Accu-
+racy (%) on both difficulty levels. ”∆” denotes the performance
+drop compared to the full ReFAct-7B model.
+Model Variant
+Level-1
+Level-2
+Acc.
+∆
+Acc.
+∆
+ReFAct-7B (Full)
+51.3
+-
+37.5
+-
+Data Ablation
+w/o GroundedVQA Data
+43.3
+-8.0
+30.4
+-7.1
+Mechanism Ablation
+w/o Memory Focusing
+49.4
+-1.9
+33.9
+-3.6
+w/o Visual Focusing
+40.2
+-11.1
+26.8
+-10.7
+Impact of Focusing Mechanisms. We further validate the
+architecture by selectively disabling its core tools at infer-
+ence time on the GroundedVQA benchmark:
+• w/o Visual Focusing: Disabling the Ground tool causes
+the most severe performance degradation, with an ac-
+curacy drop of 11.1% on Level-1 and 10.7% on Level-
+2. This confirms that active visual focusing is the most
+critical component for filtering the extreme visual noise
+present in this benchmark.
+• w/o Memory Focusing: Disabling the Defocus and
+Refocus tools resulted in a smaller but notable accu-
+racy drop of 1.9% on Level-1 and 3.6% on Level-2. This
+suggests that while managing retrieval noise is beneficial,
+the primary bottleneck addressed by our benchmark is vi-
+sual, not textual, overload.
+5. Conclusions
+This paper introduces ReFAct, a novel framework designed
+to overcome the critical challenge of contextual noise in
+multimodal web environments by shifting agents from pas-
+sive information consumption to active context manage-
+ment.
+Through synergistic Active Visual Focusing and
+Active Memory Focusing mechanisms, ReFAct empowers
+agents to dynamically filter visual clutter and retrieval over-
+load, thereby maintaining a high-fidelity working memory
+for complex reasoning.
+We instantiated this architecture
+in ReFAct-7B and validated it using our newly constructed
+GroundedVQA benchmark, where it demonstrated signifi-
+cant performance gains over existing open-source baselines
+and competitiveness with top-tier proprietary models, par-
+ticularly in high-noise regimes. Our work establishes ac-
+tive focusing as a foundational requirement for robust mul-
+timodal agents, paving the way for future extensions into
+continuous data streams such as real-time video or audio
+processing.
+14997
+
+
+References
+[1] Shuai Bai, Keqin Chen, Xuejing Liu, Jialin Wang, Wen-
+bin Ge, Sibo Song, Kai Dang, Peng Wang, Shijie Wang,
+Jun Tang, Humen Zhong, Yuanzhi Zhu, Ming-Hsuan Yang,
+Zhaohai Li, Jianqiang Wan, Pengfei Wang, Wei Ding,
+Zheren Fu, Yiheng Xu, Jiabo Ye, Xi Zhang, Tianbao Xie,
+Zesen Cheng, Hang Zhang, Zhibo Yang, Haiyang Xu,
+and Junyang Lin.
+Qwen2.5-vl technical report.
+CoRR,
+abs/2502.13923, 2025. 2
+[2] Xianfu Cheng, Wei Zhang, Shiwei Zhang, Jian Yang, Xi-
+angyuan Guan, Xianjie Wu, Xiang Li, Ge Zhang, Jiaheng
+Liu, Yuying Mai, Yutao Zeng, Zhoufutu Wen, Ke Jin, Baorui
+Wang, Weixiao Zhou, Yunhong Lu, Tongliang Li, Wenhao
+Huang, and Zhoujun Li. Simplevqa: Multimodal factual-
+ity evaluation for multimodal large language models. CoRR,
+abs/2502.13059, 2025. 5, 7
+[3] Mingyang Fu, Yuyang Peng, Benlin Liu, Yao Wan, and
+Dongping Chen. Livevqa: Live visual knowledge seeking.
+arXiv preprint arXiv:2504.05288, 2025. 5, 7
+[4] Xinyu Geng, Peng Xia, Zhen Zhang, Xinyu Wang, Qiuchen
+Wang, Ruixue Ding, Chenxi Wang, Jialong Wu, Yida Zhao,
+Kuan Li, Yong Jiang, Pengjun Xie, Fei Huang, and Jin-
+gren Zhou. Webwatcher: Breaking new frontier of vision-
+language deep research agent. CoRR, abs/2508.05748, 2025.
+1, 2, 7
+[5] Google. Gemini 2.5: Our most intelligent ai model, 2025. 2
+[6] Kelly Hong, Anton Troynikov, and Jeff Huber. Context rot:
+How increasing input tokens impacts llm performance. Tech-
+nical report, Chroma, 2025. 2
+[7] Dongzhi Jiang, Renrui Zhang, Ziyu Guo, Yanmin Wu, Ji-
+ayi Lei, Pengshuo Qiu, Pan Lu, Zehui Chen, Guanglu Song,
+Peng Gao, Yu Liu, Chunyuan Li, and Hongsheng Li. Mm-
+search: Benchmarking the potential of large models as multi-
+modal search engines. CoRR, abs/2409.12959, 2024. 5, 7
+[8] Bowen Jin, Hansi Zeng, Zhenrui Yue, Dong Wang, Hamed
+Zamani, and Jiawei Han. Search-r1: Training llms to rea-
+son and leverage search engines with reinforcement learning.
+CoRR, abs/2503.09516, 2025. 1, 2
+[9] Alexander Kirillov, Eric Mintun, Nikhila Ravi, Hanzi Mao,
+Chlo´e Rolland, Laura Gustafson, Tete Xiao, Spencer White-
+head, Alexander C. Berg, Wan-Yen Lo, Piotr Doll´ar, and
+Ross B. Girshick. Segment anything. In IEEE/CVF Inter-
+national Conference on Computer Vision, ICCV 2023, Paris,
+France, October 1-6, 2023, pages 3992–4003. IEEE, 2023.
+4
+[10] Junnan Li, Dongxu Li, Silvio Savarese, and Steven C. H.
+Hoi.
+BLIP-2: bootstrapping language-image pre-training
+with frozen image encoders and large language models. In
+International Conference on Machine Learning, ICML 2023,
+23-29 July 2023, Honolulu, Hawaii, USA, pages 19730–
+19742. PMLR, 2023. 2
+[11] Haotian Liu, Chunyuan Li, Qingyang Wu, and Yong Jae Lee.
+Visual instruction tuning. CoRR, abs/2304.08485, 2023. 2
+[12] Run Luo, Lu Wang, Wanwei He, and Xiaobo Xia. Gui-r1:
+A generalist r1-style vision-language action model for gui
+agents. arXiv preprint arXiv:2504.10458, 2025. 2
+[13] Kenneth Marino, Mohammad Rastegari, Ali Farhadi, and
+Roozbeh Mottaghi. OK-VQA: A visual question answering
+benchmark requiring external knowledge. In IEEE Confer-
+ence on Computer Vision and Pattern Recognition, CVPR
+2019, Long Beach, CA, USA, June 16-20, 2019, pages 3195–
+3204. Computer Vision Foundation / IEEE, 2019. 3
+[14] OpenAI. Introducing gpt-5, 2025. 2
+[15] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya
+Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry,
+Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen
+Krueger, and Ilya Sutskever.
+Learning transferable visual
+models from natural language supervision. In Proceedings
+of the 38th International Conference on Machine Learning,
+ICML 2021, 18-24 July 2021, Virtual Event, pages 8748–
+8763. PMLR, 2021. 2
+[16] Dustin Schwenk, Apoorv Khandelwal, Christopher Clark,
+Kenneth Marino, and Roozbeh Mottaghi.
+A-OKVQA: A
+benchmark for visual question answering using world knowl-
+edge. In Computer Vision - ECCV 2022 - 17th European
+Conference, Tel Aviv, Israel, October 23-27, 2022, Proceed-
+ings, Part VIII, pages 146–162. Springer, 2022. 3
+[17] Huatong Song, Jinhao Jiang, Yingqian Min, Jie Chen,
+Zhipeng Chen, Wayne Xin Zhao, Lei Fang, and Ji-Rong
+Wen. R1-searcher: Incentivizing the search capability in llms
+via reinforcement learning. CoRR, abs/2503.05592, 2025. 1
+[18] Zhaochen Su, Peng Xiang, Hangyu Guo, Zhenhua Liu,
+Yan Ma, Xiaoye Qu, Jiaqi Liu, Yanshu Li, Kaide Zeng,
+Zhengyuan Yang, Linjie Li, Yu Cheng, Heng Ji, Junxian
+He, and Yi R. (May) Fung. Thinking with images for mul-
+timodal reasoning: Foundations, methods, and future fron-
+tiers. CoRR, abs/2506.23918, 2025. 2
+[19] Jinming Wu, Zihao Deng, Wei Li, Yiding Liu, Bo You, Bo
+Li, Zejun Ma, and Ziwei Liu. Mmsearch-r1: Incentivizing
+lmms to search. CoRR, abs/2506.20670, 2025. 1, 2, 7
+[20] Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran,
+Karthik R. Narasimhan, and Yuan Cao. React: Synergizing
+reasoning and acting in language models. In The Eleventh In-
+ternational Conference on Learning Representations, ICLR
+2023, Kigali, Rwanda, May 1-5, 2023. OpenReview.net,
+2023. 6
+[21] Xiaohua Zhai, Basil Mustafa, Alexander Kolesnikov, and
+Lucas Beyer. Sigmoid loss for language image pre-training.
+In IEEE/CVF International Conference on Computer Vision,
+ICCV 2023, Paris, France, October 1-6, 2023, pages 11941–
+11952. IEEE, 2023. 2
+[22] Pan Zhang, Xiaoyi Dong, Yuhang Cao, Yuhang Zang, Rui
+Qian, Xilin Wei, Lin Chen, Yifei Li, Junbo Niu, Shuan-
+grui Ding, Qipeng Guo, Haodong Duan, Xin Chen, Han Lv,
+Zheng Nie, Min Zhang, Bin Wang, Wenwei Zhang, Xinyue
+Zhang, Jiaye Ge, Wei Li, Jingwen Li, Zhongying Tu, Con-
+ghui He, Xingcheng Zhang, Kai Chen, Yu Qiao, Dahua Lin,
+and Jiaqi Wang. Internlm-xcomposer2.5-omnilive: A com-
+prehensive multimodal system for long-term streaming video
+and audio interactions. CoRR, abs/2412.09596, 2024. 2
+[23] Yuxiang Zheng, Dayuan Fu, Xiangkun Hu, Xiaojie Cai, Lyu-
+manshan Ye, Pengrui Lu, and Pengfei Liu. Deepresearcher:
+Scaling deep research via reinforcement learning in real-
+world environments. CoRR, abs/2504.03160, 2025. 1, 2
+14998
+
+
+[24] Ziwei Zheng, Michael Yang, Jack Hong, Chenxiao Zhao,
+Guohai Xu, Le Yang, Chao Shen, and Xing Yu.
+Deep-
+eyes: Incentivizing” thinking with images” via reinforce-
+ment learning. arXiv preprint arXiv:2505.14362, 2025. 7
+14999
