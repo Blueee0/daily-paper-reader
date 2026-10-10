@@ -25,5 +25,125 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
-  intent_profiles: []
-source_backends: {}
+  intent_profiles:
+    - tag: fin-mm-agent
+      description: 金融多模态Agent相关研究
+      enabled: true
+      paper_sources:
+        - arxiv
+        - biorxiv
+      keywords:
+        - keyword: multimodal agent
+          keyword_cn: 多模态智能体
+          query: research on multimodal agents that integrate text, vision, and other modalities
+        - keyword: financial multimodal agent
+          keyword_cn: 金融多模态智能体
+          query: studies on financial multimodal agents for investment analysis and decision support
+        - keyword: financial document understanding
+          keyword_cn: 金融文档理解
+          query: understanding financial documents such as reports, tables, and charts
+        - keyword: multimodal reasoning
+          keyword_cn: 多模态推理
+          query: multimodal reasoning over financial text, images, and structured data
+        - keyword: financial question answering
+          keyword_cn: 金融问答
+          query: financial question answering with multimodal evidence
+        - keyword: tool augmented agent
+          keyword_cn: 工具增强智能体
+          query: tool augmented agents that use external APIs and retrieval for financial tasks
+      intent_queries:
+        - query: Find research on multimodal agents applied to financial analysis and decision making.
+          query_cn: 查找应用于金融分析和决策的多模态智能体研究。
+          enabled: true
+          source: manual
+          note: ''
+        - query: Survey financial multimodal agent architectures that combine language, vision, and structured data.
+          query_cn: 综述结合语言、视觉和结构化数据的金融多模态智能体架构。
+          enabled: true
+          source: manual
+          note: ''
+        - query: Identify benchmarks and evaluation methods for financial multimodal agents.
+          query_cn: 识别金融多模态智能体的基准和评估方法。
+          enabled: true
+          source: manual
+          note: ''
+        - query: Explore tool use and retrieval augmentation in financial multimodal agents.
+          query_cn: 探索金融多模态智能体中的工具使用和检索增强。
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-10-10T07:47:14.349Z'
+    - tag: rsi-research
+      description: RSI自进化相关研究
+      enabled: true
+      paper_sources:
+        - arxiv
+        - biorxiv
+      keywords:
+        - keyword: recursive self-improvement
+          keyword_cn: 递归自我改进
+          query: research on recursive self-improvement in artificial intelligence
+        - keyword: self-evolving artificial intelligence
+          keyword_cn: 自进化人工智能
+          query: studies on self-evolving artificial intelligence systems
+        - keyword: self-modifying agents
+          keyword_cn: 自修改智能体
+          query: agents capable of modifying their own code and behavior
+        - keyword: evolutionary self-improvement
+          keyword_cn: 进化式自我改进
+          query: evolutionary approaches to self-improvement in AI systems
+        - keyword: self-improving systems
+          keyword_cn: 自我改进系统
+          query: self-improving systems that enhance their own performance
+        - keyword: agent self-modification
+          keyword_cn: 智能体自我修改
+          query: agent self-modification and recursive capability enhancement
+      intent_queries:
+        - query: Find research papers on recursive self improvement and self evolving artificial intelligence systems.
+          query_cn: 查找关于递归自我改进和自进化人工智能系统的研究论文。
+          enabled: true
+          source: manual
+          note: ''
+        - query: Research on AI agents that autonomously improve their own capabilities through self modification.
+          query_cn: 关于通过自我修改自主提升自身能力的AI智能体的研究。
+          enabled: true
+          source: manual
+          note: ''
+        - query: Studies on open ended evolutionary self improvement and automated scientific discovery in AI.
+          query_cn: 关于AI中开放式进化式自我改进和自动化科学发现的研究。
+          enabled: true
+          source: manual
+          note: ''
+        - query: Approaches for self referential learning and machine self improvement in artificial intelligence.
+          query_cn: 人工智能中自指学习和机器自我改进的方法。
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-10-10T07:48:38.327Z'
+source_backends:
+  arxiv:
+    papers_table: arxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_arxiv_papers
+    vector_rpc_exact: match_arxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_arxiv_papers_bm25
+    sync_table: arxiv_sync_status
+    sync_success_value: success
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
+  biorxiv:
+    papers_table: biorxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_biorxiv_papers_exact
+    vector_rpc_exact: match_biorxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_biorxiv_papers_bm25
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
