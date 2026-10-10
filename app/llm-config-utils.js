@@ -13,14 +13,41 @@
     'deepseek-v4-pro',
   ];
   const DEEPSEEK_V4_MAX_OUTPUT_TOKENS = 393216;
-  const DEEPSEEK_PRESETS = Object.freeze({
+  // 多平台 preset：任意 OpenAI Chat Completions 兼容平台；custom 允许自由填写。
+  const PROVIDER_PRESETS = Object.freeze({
     deepseek: Object.freeze({
       key: 'deepseek',
       label: 'DeepSeek 官方',
       baseUrl: 'https://api.deepseek.com',
       models: Object.freeze(['deepseek-v4-flash', 'deepseek-v4-pro']),
     }),
+    siliconflow: Object.freeze({
+      key: 'siliconflow',
+      label: 'SiliconFlow 硅基流动',
+      baseUrl: 'https://api.siliconflow.cn/v1',
+      models: Object.freeze(['deepseek-ai/DeepSeek-V3', 'Qwen/Qwen3-32B']),
+    }),
+    openai: Object.freeze({
+      key: 'openai',
+      label: 'OpenAI 官方',
+      baseUrl: 'https://api.openai.com/v1',
+      models: Object.freeze(['gpt-4.1-mini', 'gpt-4o-mini']),
+    }),
+    openrouter: Object.freeze({
+      key: 'openrouter',
+      label: 'OpenRouter',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      models: Object.freeze(['openai/gpt-4o-mini', 'anthropic/claude-3.5-haiku']),
+    }),
+    custom: Object.freeze({
+      key: 'custom',
+      label: '自定义平台',
+      baseUrl: '',
+      models: Object.freeze([]),
+    }),
   });
+  // 兼容旧导出名。
+  const DEEPSEEK_PRESETS = PROVIDER_PRESETS;
 
   const normalizeText = (value) => String(value || '').trim();
 
@@ -109,19 +136,49 @@
     };
   };
 
+  const inferProviderFromEndpoint = (baseUrl, model) => {
+    const normalizedBaseUrl = normalizeBaseUrlForStorage(baseUrl || '').toLowerCase();
+    const normalizedModel = normalizeText(model || '').toLowerCase();
+    if (
+      /(^|\/\/)(api\.)?deepseek\.com(?::\d+)?(?:$|\/)/i.test(normalizedBaseUrl)
+      || normalizedModel.startsWith('deepseek-')
+    ) {
+      return 'deepseek';
+    }
+    if (/siliconflow\.cn/i.test(normalizedBaseUrl)) {
+      return 'siliconflow';
+    }
+    if (/(^|\/\/)(api\.)?openai\.com(?::\d+)?(?:$|\/)/i.test(normalizedBaseUrl)) {
+      return 'openai';
+    }
+    if (/(^|\/\/)openrouter\.ai(?::\d+)?(?:$|\/)/i.test(normalizedBaseUrl)) {
+      return 'openrouter';
+    }
+    if (!normalizedBaseUrl && !normalizedModel) {
+      // 未配置任何端点时维持旧的默认值，避免影响存量判定。
+      return 'deepseek';
+    }
+    return 'custom';
+  };
+
   const inferProviderType = (secret) => {
     const safeSecret = secret && typeof secret === 'object' ? secret : {};
     const llmProvider = safeSecret.llmProvider || {};
     const explicit = normalizeText(llmProvider.type || llmProvider.provider || '').toLowerCase();
-    if (explicit === 'deepseek') {
-      return 'deepseek';
+    if (explicit) {
+      return explicit;
     }
-    return 'deepseek';
+    const summarized = safeSecret.summarizedLLM || {};
+    const chatList = Array.isArray(safeSecret.chatLLMs) ? safeSecret.chatLLMs : [];
+    const firstChat = chatList[0] && typeof chatList[0] === 'object' ? chatList[0] : {};
+    const baseUrl = summarized.baseUrl || firstChat.baseUrl || '';
+    const model = normalizeText(summarized.model || '');
+    return inferProviderFromEndpoint(baseUrl, model);
   };
 
-  const getDeepSeekPreset = (key) => {
+  const getProviderPreset = (key) => {
     const presetKey = normalizeText(key).toLowerCase();
-    const preset = DEEPSEEK_PRESETS[presetKey];
+    const preset = PROVIDER_PRESETS[presetKey];
     if (!preset) return null;
     return {
       key: preset.key,
@@ -131,16 +188,10 @@
     };
   };
 
+  const getDeepSeekPreset = getProviderPreset;
+
   const inferChatApiProfile = (baseUrl, model) => {
-    const normalizedBaseUrl = normalizeBaseUrlForStorage(baseUrl || '').toLowerCase();
-    const normalizedModel = normalizeText(model || '').toLowerCase();
-    if (/(^|\/\/)(api\.)?deepseek\.com(?:$|\/)/i.test(normalizedBaseUrl)) {
-      return 'deepseek';
-    }
-    if (normalizedModel.startsWith('deepseek-')) {
-      return 'deepseek';
-    }
-    return 'unsupported';
+    return inferProviderFromEndpoint(baseUrl, model);
   };
 
   const resolveJsonResponseMode = ({ baseUrl, model, preferSchema = true }) => {
@@ -199,6 +250,7 @@
   return {
     DEFAULT_DEEPSEEK_BASE_URL,
     DEFAULT_DEEPSEEK_CHAT_MODELS,
+    PROVIDER_PRESETS,
     DEEPSEEK_PRESETS,
     normalizeText,
     normalizeBaseUrlForStorage,
@@ -207,6 +259,8 @@
     resolveChatModels,
     resolveSummaryLLM,
     inferProviderType,
+    inferProviderFromEndpoint,
+    getProviderPreset,
     getDeepSeekPreset,
     inferChatApiProfile,
     resolveJsonResponseMode,

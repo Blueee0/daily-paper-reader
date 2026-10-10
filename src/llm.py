@@ -9,8 +9,8 @@ import requests
 """
 统一的 LLM 客户端封装。
 
-提供商/模型命名规则：'provider/model'，provider 大小写不敏感，model 保留大小写与路径。
-当前运行链路仅支持 DeepSeek；本地 reranker 不走 LLM API。
+支持任意 OpenAI Chat Completions 兼容平台：通过 LLM_API_KEY / LLM_BASE_URL /
+LLM_MODEL（或旧的 SUMMARY_* / DEEPSEEK_* 环境变量）切换，见 resolve_llm_config()。
 """
 
 # 单次实验级别的全局 token 统计（需由调用方在实验开始前手动 reset）
@@ -37,6 +37,36 @@ GLOBAL_TOKENS = {
 GLOBAL_TIME_SECONDS: float = 0.0
 
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEFAULT_LLM_MODEL = "deepseek-v4-flash"
+
+
+def _env_text(*names: str) -> str:
+    for name in names:
+        value = (os.getenv(name) or '').strip()
+        if value:
+            return value
+    return ''
+
+
+def resolve_llm_config() -> Dict[str, str]:
+    """
+    统一解析流水线 LLM 配置，支持任意 OpenAI 兼容平台。
+
+    三个字段独立解析，优先级均为：
+    - LLM_API_KEY / LLM_BASE_URL / LLM_MODEL（通用平台切换入口）
+    - SUMMARY_API_KEY / SUMMARY_BASE_URL / SUMMARY_MODEL（摘要链路旧名）
+    - DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DEEPSEEK_MODEL（DeepSeek 默认）
+
+    LLM_MODEL 直接作为 API 请求的 model 参数发送（OpenRouter/SiliconFlow 等
+    平台的模型名本身可以含 '/'，因此不做 provider 前缀剥离）。
+    """
+    return {
+        'api_key': _env_text('LLM_API_KEY', 'SUMMARY_API_KEY', 'DEEPSEEK_API_KEY'),
+        'base_url': _env_text(
+            'LLM_BASE_URL', 'SUMMARY_BASE_URL', 'DEEPSEEK_BASE_URL', 'LLM_PRIMARY_BASE_URL'
+        ) or DEFAULT_DEEPSEEK_BASE_URL,
+        'model': _env_text('LLM_MODEL', 'SUMMARY_MODEL', 'DEEPSEEK_MODEL') or DEFAULT_LLM_MODEL,
+    }
 
 
 def reset_global_tokens():
@@ -540,8 +570,12 @@ class LLMClient:
         last_error: Exception | None = None
         for attempt_idx, req_base in enumerate(request_bases, start=1):
             request_url = self._build_chat_completions_url(req_base)
+            request_payload = payload
+            if 'thinking' in payload and self._provider_name(req_base) != 'deepseek':
+                # thinking 是 DeepSeek 专属字段，其他 OpenAI 兼容平台会直接拒绝。
+                request_payload = {k: v for k, v in payload.items() if k != 'thinking'}
             try:
-                response = requests.post(request_url, headers=headers, json=payload, timeout=120)
+                response = requests.post(request_url, headers=headers, json=request_payload, timeout=120)
                 response.raise_for_status()
                 try:
                     response_data = response.json()
@@ -797,26 +831,16 @@ class ClientFactory:
     @staticmethod
     def from_env():
         """
-        基于环境变量创建具体客户端。
+        基于环境变量创建通用 OpenAI 兼容客户端。
 
-        必填：
-        - LLM_MODEL：形如 'provider/model'。
-        选填：
-        - LLM_API_KEY：通用 API key（优先级高于各 provider 专用 key）
-        - LLM_BASE_URL：通用 base_url（优先级高于默认 base_url）
+        配置来源与优先级见 resolve_llm_config()；未配置 API key 时抛错。
         """
-        model_env = (os.getenv('LLM_MODEL') or '').strip()
-        if not model_env:
-            raise ValueError("缺少必要环境变量: LLM_MODEL（格式为 'deepseek/model'）")
-
-        provider, model = parse_provider_model(model_env)
-        api_key = (os.getenv('LLM_API_KEY') or '').strip() or None
-        base_url = (os.getenv('LLM_BASE_URL') or '').strip() or None
-
-        if provider == 'deepseek':
-            base_url = base_url or DEFAULT_DEEPSEEK_BASE_URL
-            return DeepSeekClient(api_key=api_key or os.getenv('DEEPSEEK_API_KEY', ''), model=model, base_url=base_url)
-        raise ValueError(f"当前仅支持 DeepSeek API，请使用 'deepseek/模型名'，当前 provider={provider}")
+        config = resolve_llm_config()
+        if not config['api_key']:
+            raise ValueError(
+                "缺少 LLM_API_KEY（或 SUMMARY_API_KEY / DEEPSEEK_API_KEY）环境变量"
+            )
+        return LLMClient(api_key=config['api_key'], model=config['model'], base_url=config['base_url'])
 
     @staticmethod
     def from_config(_config: dict | None = None):

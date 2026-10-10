@@ -276,6 +276,54 @@
     (m.starterPacks || []).forEach(function (pack) { if (pack.href) out.push(normalizeRouteHref(pack.href)); });
     return out.filter(Boolean);
   }
+  // 供“阅读清单”导出：全量论文条目（含标题与分组元信息）。
+  function collectPapersFromModel(model) {
+    var out = [];
+    var m = model || state.model || {};
+    (m.daily || []).forEach(function (day) {
+      (day.papers || []).forEach(function (paper) {
+        if (!paper || !paper.href) return;
+        out.push({
+          id: paper.id || '',
+          href: normalizeRouteHref(paper.href),
+          title: paper.title || paper.id || '',
+          link: paper.link || '',
+          dateKey: day.dateKey || '',
+          section: paper.section || '',
+          group: 'daily',
+        });
+      });
+    });
+    (m.conferences || []).forEach(function (conf) {
+      (conf.topics || []).forEach(function (topic) {
+        (topic.papers || []).forEach(function (paper) {
+          if (!paper || !paper.href) return;
+          out.push({
+            id: paper.id || '',
+            href: normalizeRouteHref(paper.href),
+            title: paper.title || paper.id || '',
+            link: paper.link || '',
+            group: 'conference',
+            conference: conf.label || conf.key || '',
+            topic: topic.label || topic.key || '',
+            section: paper.section || '',
+          });
+        });
+      });
+    });
+    taskPapers(m).forEach(function (paper) {
+      if (!paper || !paper.href) return;
+      out.push({
+        id: paper.id || '',
+        href: normalizeRouteHref(paper.href),
+        title: paper.title || paper.id || '',
+        link: paper.link || '',
+        group: 'backtrack',
+        section: paper.section || 'backtrack',
+      });
+    });
+    return out;
+  }
   function parseStarterPackIndex(index) {
     if (!index || index.version !== 1 || !Array.isArray(index.packs)) return [];
     var seen = {};
@@ -2843,6 +2891,8 @@
     syncActive: syncActive,
     notifyReadStateChanged: function () { rerenderSidebarBody(rerenderOptionsForReadStateEvent()); },
     getReadState: function () { return ReadState.getAll(); },
+    markRead: function (paperId, status, options) { return markPaperStatus(paperId, status, options); },
+    getPapers: function () { return collectPapersFromModel(state.model); },
     getPaperHrefs: function () { return collectPaperHrefsFromModel(state.model); },
     getReportHrefs: function () { return collectReportHrefsFromModel(state.model); },
     getCurrentHref: function () { return currentRouteHref(); },
@@ -2877,6 +2927,8 @@
         findCurrentReportHrefFromModel: findCurrentReportHrefFromModel,
         collectUnreadPaperIdsForSnapshot: collectUnreadPaperIdsForSnapshot,
         ensureUnreadSessionPaperIds: ensureUnreadSessionPaperIds,
+        collectPapersFromModel: collectPapersFromModel,
+        markPaperStatus: markPaperStatus,
         buildDailyDateView: buildDailyDateView,
         buildDailyCalendarView: buildDailyCalendarView,
         buildDailyTagView: buildDailyTagView,

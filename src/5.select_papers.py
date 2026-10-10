@@ -468,6 +468,12 @@ def parse_score(value: Any) -> float:
         return 0.0
 
 
+def _user_read_exclusion_enabled() -> bool:
+    """用户已读去重开关：DPR_EXCLUDE_USER_READ=0/false/off 时关闭，默认开启。"""
+    raw = str(os.getenv("DPR_EXCLUDE_USER_READ") or "").strip().lower()
+    return raw not in ("0", "false", "off", "no")
+
+
 def build_scored_papers(papers: List[Dict[str, Any]], llm_ranked: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     paper_map = {}
     for p in papers:
@@ -1141,6 +1147,20 @@ def main() -> None:
             log("[INFO] skims/backfill 模式：已关闭历史 seen_ids 过滤（输出数量更完整）。")
     else:
         seen_ids = collect_seen_ids(archive_root, TODAY_STR, active_tags=active_carryover_tags)
+
+    # 用户已读去重：✓/✗ 标记（Supabase）+ 手动导入清单（archive/user_read.json）。
+    # 必须在 carryover 加载之前并入 seen_ids，防止已读论文经 carryover 池回流。
+    if not args.carryover_only and _user_read_exclusion_enabled():
+        try:
+            import user_read as user_read_mod
+
+            backend = user_read_mod.load_supabase_backend_from_config(CONFIG_FILE)
+            user_read_keys = user_read_mod.collect_user_read_keys(archive_root, backend, log=log)
+        except Exception as exc:
+            log(f"[WARN] 读取用户已读清单失败，本轮跳过该去重：{exc}")
+            user_read_keys = set()
+        if user_read_keys:
+            seen_ids = seen_ids | user_read_keys
     log_substep("5.3", "加载 carryover 并构建候选集", "START")
     try:
         carryover_items, _delta = load_recent_carryover(

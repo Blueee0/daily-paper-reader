@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 
+from llm import resolve_llm_config
 from long_range_review import review_batch, review_cache_path
 
 
@@ -19,21 +20,21 @@ def review_candidates(
         raise ValueError("评审预算必须为0–300；0表示本轮不新增付费评审")
     cache = Path(root) / ".local-runs/long-range-cache"
     if model_key is None:
+        llm_config = resolve_llm_config()
         model_key = [
             os.getenv("DEEPSEEK_FILTER_MODEL")
-            or os.getenv("DEEPSEEK_MODEL")
-            or "deepseek-v4-flash",
-            os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com",
+            or llm_config["model"],
+            llm_config["base_url"],
         ]
     if client_factory is None:
 
         def client_factory():
             from llm import DeepSeekClient
 
-            key = os.getenv("DEEPSEEK_API_KEY") or ""
+            key = resolve_llm_config()["api_key"]
             if not key:
                 raise RuntimeError(
-                    "缺少DEEPSEEK_API_KEY，已保存召回结果，可以补配置后续跑"
+                    "缺少LLM_API_KEY（或 SUMMARY_API_KEY / DEEPSEEK_API_KEY），已保存召回结果，可以补配置后续跑"
                 )
             client = DeepSeekClient(key, model_key[0], model_key[1])
             client.kwargs.update(

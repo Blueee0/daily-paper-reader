@@ -281,18 +281,25 @@ def prepare_rerank_fallback(input_path: str, output_path: str) -> bool:
 
 def resolve_summary_step_env() -> dict[str, str]:
     env = os.environ.copy()
-    summary_api_key = _read_env_text("SUMMARY_API_KEY", "DEEPSEEK_API_KEY")
-    summary_base_url = _read_env_text("SUMMARY_BASE_URL", "DEEPSEEK_BASE_URL")
-    summary_model = _read_env_text("SUMMARY_MODEL", "DEEPSEEK_MODEL")
+    # LLM_* 是平台切换的通用入口，优先级最高；解析出的最终值扇出到全部
+    # 新旧变量名，保证各子步骤无论读取哪组名字都拿到同一份配置。
+    summary_api_key = _read_env_text("LLM_API_KEY", "SUMMARY_API_KEY", "DEEPSEEK_API_KEY")
+    summary_base_url = _read_env_text(
+        "LLM_BASE_URL", "SUMMARY_BASE_URL", "DEEPSEEK_BASE_URL", "LLM_PRIMARY_BASE_URL"
+    )
+    summary_model = _read_env_text("LLM_MODEL", "SUMMARY_MODEL", "DEEPSEEK_MODEL")
 
     if summary_api_key:
+        env["LLM_API_KEY"] = summary_api_key
         env["SUMMARY_API_KEY"] = summary_api_key
         env["DEEPSEEK_API_KEY"] = summary_api_key
     if summary_base_url:
+        env["LLM_BASE_URL"] = summary_base_url
         env["LLM_PRIMARY_BASE_URL"] = summary_base_url
         env["SUMMARY_BASE_URL"] = summary_base_url
         env["DEEPSEEK_BASE_URL"] = summary_base_url
     if summary_model:
+        env["LLM_MODEL"] = summary_model
         env["SUMMARY_MODEL"] = summary_model
         env["DEEPSEEK_MODEL"] = summary_model
     return env

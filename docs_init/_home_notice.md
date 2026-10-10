@@ -1,29 +1,36 @@
 <div class="dpr-home-notice-card dpr-home-panel">
-  <div class="dpr-home-notice-header dpr-home-panel-header">
-    <h3 class="dpr-home-notice-title">公告与更新</h3>
-    <a class="dpr-home-notice-tutorial" href="#/tutorial/README">使用教程 <span aria-hidden="true">›</span></a>
-  </div>
-  <div class="dpr-home-notice-entry">
-    <time class="dpr-home-notice-date" datetime="2026-10-05">10.05</time>
-    <div>
-      <strong class="dpr-home-notice-entry-title">medRxiv 自动更新已恢复</strong>
-      <span class="dpr-home-notice-entry-summary">修复超长摘要导致的向量生成失败，维护任务现会限制单条 embedding 文本长度并分片写入。受影响范围已重新同步，公开读取、关键词检索与语义检索均已验证。</span>
+  <details class="dpr-home-notice-details" open>
+    <summary class="dpr-home-notice-header dpr-home-panel-header">
+      <h3 class="dpr-home-notice-title">公告与更新</h3>
+      <span style="display:flex; align-items:center; gap:8px;">
+        <a class="dpr-home-notice-tutorial" href="#/tutorial/README">使用教程 <span aria-hidden="true">›</span></a>
+        <span class="dpr-home-notice-toggle" aria-hidden="true">▾</span>
+      </span>
+    </summary>
+    <div class="dpr-home-notice-body">
+      <div class="dpr-home-notice-entry">
+        <time class="dpr-home-notice-date" datetime="2026-10-05">10.05</time>
+        <div>
+          <strong class="dpr-home-notice-entry-title">medRxiv 自动更新已恢复</strong>
+          <span class="dpr-home-notice-entry-summary">修复超长摘要导致的向量生成失败，维护任务现会限制单条 embedding 文本长度并分片写入。受影响范围已重新同步，公开读取、关键词检索与语义检索均已验证。</span>
+        </div>
+      </div>
+      <div class="dpr-home-notice-entry">
+        <time class="dpr-home-notice-date" datetime="2026-09-16">09.16</time>
+        <div>
+          <strong class="dpr-home-notice-entry-title">日报跨日重复推荐已修复</strong>
+          <span class="dpr-home-notice-entry-summary">历史推荐现按原始召回标签与 arXiv 论文标识去重，暂停词条不再参与评分；同一专题次日不会重复推荐相同论文。已有历史页面保留，不自动删除。</span>
+        </div>
+      </div>
+      <div class="dpr-home-notice-entry">
+        <time class="dpr-home-notice-date" datetime="2026-09-09">09.09</time>
+        <div>
+          <strong class="dpr-home-notice-entry-title">90天/365天 arXiv 专题回溯</strong>
+          <span class="dpr-home-notice-entry-summary">支持分片召回、断点评审与分页查看，核心论文与待复核结果分开展示。DeepSeek 费用按实际用量计算，不下载全量 PDF。</span>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="dpr-home-notice-entry">
-    <time class="dpr-home-notice-date" datetime="2026-09-16">09.16</time>
-    <div>
-      <strong class="dpr-home-notice-entry-title">日报跨日重复推荐已修复</strong>
-      <span class="dpr-home-notice-entry-summary">历史推荐现按原始召回标签与 arXiv 论文标识去重，暂停词条不再参与评分；同一专题次日不会重复推荐相同论文。已有历史页面保留，不自动删除。</span>
-    </div>
-  </div>
-  <div class="dpr-home-notice-entry">
-    <time class="dpr-home-notice-date" datetime="2026-09-09">09.09</time>
-    <div>
-      <strong class="dpr-home-notice-entry-title">90天/365天 arXiv 专题回溯</strong>
-      <span class="dpr-home-notice-entry-summary">支持分片召回、断点评审与分页查看，核心论文与待复核结果分开展示。DeepSeek 费用按实际用量计算，不下载全量 PDF。</span>
-    </div>
-  </div>
+  </details>
   <div class="dpr-home-site-stats" data-dpr-site-stats hidden aria-live="polite">
     <span>今天有 <strong class="dpr-home-site-stat-value" data-dpr-daily-readers>--</strong> 人在看论文</span>
     <span class="dpr-home-site-stat-separator" aria-hidden="true">·</span>

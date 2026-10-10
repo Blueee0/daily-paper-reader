@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 
+from llm import resolve_llm_config
 from long_range_review import write_json
 
 
@@ -244,8 +245,8 @@ def publish_pack(root, manifest, content_limit=100):
             for p in prepared
             if p.get("reading_status") != "complete"
         ]
-        model = os.getenv("DEEPSEEK_MODEL") or "deepseek-v4-flash"
-        endpoint = os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"
+        model = resolve_llm_config()["model"]
+        endpoint = resolve_llm_config()["base_url"]
         key = guide_cache_key(manifest["profile"], selected, model, endpoint)
         guide_path = root / ".local-runs/starter-pack-cache/guides" / (key + ".json")
         if guide_path.exists():
@@ -255,9 +256,10 @@ def publish_pack(root, manifest, content_limit=100):
         else:
             client = None
             if selected:
-                if not os.getenv("DEEPSEEK_API_KEY"):
+                llm_config = resolve_llm_config()
+                if not llm_config["api_key"]:
                     raise RuntimeError("缺少导读生成模型凭据")
-                client = DeepSeekClient(os.environ["DEEPSEEK_API_KEY"], model, endpoint)
+                client = DeepSeekClient(llm_config["api_key"], model, endpoint)
                 client.kwargs.update(max_tokens=10000, thinking={"type": "disabled"})
             guide = generate_guide(manifest["profile"], selected, client)
             write_json(guide_path, guide)
@@ -446,8 +448,9 @@ def _publish_selection(root, manifest, papers, record, folder, cached):
         },
     )
     if mode == "starter":
-        model = os.getenv("DEEPSEEK_MODEL") or "deepseek-v4-flash"
-        endpoint = os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"
+        llm_config = resolve_llm_config()
+        model = llm_config["model"]
+        endpoint = llm_config["base_url"]
         key = guide_cache_key(manifest["profile"], papers, model, endpoint)
         record["guide_cache_key"] = key
         manifest["guide_cache_key"] = key
@@ -566,10 +569,11 @@ def _publish_selection(root, manifest, papers, record, folder, cached):
 
                 client = None
                 if papers:
-                    if not os.getenv("DEEPSEEK_API_KEY"):
+                    llm_config = resolve_llm_config()
+                    if not llm_config["api_key"]:
                         raise RuntimeError("缺少导读模型凭据")
                     client = DeepSeekClient(
-                        os.environ["DEEPSEEK_API_KEY"], model, endpoint
+                        llm_config["api_key"], model, endpoint
                     )
                     client.kwargs.update(
                         max_tokens=16000, thinking={"type": "disabled"}

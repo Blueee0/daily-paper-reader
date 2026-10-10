@@ -11,10 +11,12 @@ from pathlib import Path
 import re
 
 try:
+    from llm import DeepSeekClient, resolve_llm_config
     from source_config import get_source_backend
     from subscription_plan import build_pipeline_inputs
     from supabase_source import match_papers_by_bm25, match_papers_by_embedding
 except ImportError:
+    from .llm import DeepSeekClient, resolve_llm_config
     from .source_config import get_source_backend
     from .subscription_plan import build_pipeline_inputs
     from .supabase_source import match_papers_by_bm25, match_papers_by_embedding
@@ -359,8 +361,8 @@ def run_review(config, days, root, run_token):
         raise RuntimeError(
             "以下专题没有启用的关键词或语义查询：" + "、".join(missing_tags)
         )
-    if not os.getenv("DEEPSEEK_API_KEY"):
-        raise RuntimeError("专题回溯需要 DEEPSEEK_API_KEY")
+    if not resolve_llm_config()["api_key"]:
+        raise RuntimeError("专题回溯需要 LLM_API_KEY（或 SUMMARY_API_KEY / DEEPSEEK_API_KEY）")
     # 从固定运行标识推导日期，跨UTC午夜和重跑时不会使窗口漂移。
     end = datetime.strptime(run_token[-8:], "%Y%m%d").replace(
         tzinfo=timezone.utc
@@ -371,19 +373,17 @@ def run_review(config, days, root, run_token):
     except ImportError:
         from .model_loader import load_sentence_transformer
 
-    try:
-        from llm import DeepSeekClient
-    except ImportError:
-        from .llm import DeepSeekClient
+    llm_config = resolve_llm_config()
     model_name = (
         os.getenv("DEEPSEEK_FILTER_MODEL")
-        or os.getenv("DEEPSEEK_MODEL")
-        or "deepseek-v4-flash"
+        or llm_config["model"]
     )
-    base_url = os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"
+    base_url = llm_config["base_url"]
 
     def client_factory():
-        client = DeepSeekClient(os.environ["DEEPSEEK_API_KEY"], model_name, base_url)
+        if not llm_config["api_key"]:
+            raise RuntimeError("专题回溯需要 LLM_API_KEY（或 SUMMARY_API_KEY / DEEPSEEK_API_KEY）")
+        client = DeepSeekClient(llm_config["api_key"], model_name, base_url)
         client.kwargs.update(
             temperature=0, max_tokens=6000, thinking={"type": "disabled"}
         )

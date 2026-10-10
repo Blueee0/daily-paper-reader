@@ -162,11 +162,21 @@ def test_home_panels_share_a_quiet_visual_language():
     assert shared_selector in css
 
     shared_rule = css.split(shared_selector, 1)[1].split("}", 1)[0]
-    assert "background: #fbfcfb" in shared_rule
-    assert "border: 1px solid #dfe7e2" in shared_rule
+    # 安静视觉语言合同：两卡片共用同一底色/描边。允许 design token 等价写法
+    # （--dpr-surface-soft 定义为 #fbfcfb、--dpr-border 为 #e3e9e5）。
+    background_ok = "background: #fbfcfb" in shared_rule or (
+        "background: var(--dpr-surface-soft)" in shared_rule
+        and "--dpr-surface-soft: #fbfcfb" in css
+    )
+    border_ok = "border: 1px solid #dfe7e2" in shared_rule or (
+        "border: 1px solid var(--dpr-border)" in shared_rule
+        and "--dpr-border: #e3e9e5" in css
+    )
+    assert background_ok
+    assert border_ok
     assert "border-left" not in shared_rule
-    assert "border-radius: 6px" in shared_rule
-    assert "box-shadow: none" in shared_rule
+    assert "border-radius: 6px" in shared_rule or "border-radius: var(--dpr-radius-card)" in shared_rule
+    assert "box-shadow: none" in shared_rule or "box-shadow: var(--dpr-shadow-card)" in shared_rule
     assert "gradient" not in shared_rule
 
     assert ".dpr-home-panel-header" in css

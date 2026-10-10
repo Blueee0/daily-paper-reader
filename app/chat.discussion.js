@@ -121,7 +121,10 @@ window.PrivateDiscussionChat = (function () {
     ) {
       return 'deepseek';
     }
-    return 'unsupported';
+    if (!normalizedBaseUrl && !normalizedModel) {
+      return 'deepseek';
+    }
+    return 'custom';
   };
 	  const buildStreamingChatPayload = (baseUrl, model, messages) => {
 	    const utils = window.DPRLLMConfigUtils || {};

@@ -42,6 +42,8 @@ window.SubscriptionsManager = (function () {
   let adminConferencePanel = null;
   let adminTopicTabBtn = null;
   let adminTopicPanel = null;
+  let adminListsTabBtn = null;
+  let adminListsPanel = null;
   let topicProfilePickerEl = null;
   let topicSelectedTag = '';
   let topicSelectionInitialized = false;
@@ -1010,6 +1012,12 @@ window.SubscriptionsManager = (function () {
       adminConferencePanel.hidden = active !== 'conference';
     }
     if (adminTopicPanel) adminTopicPanel.hidden = active !== 'topic';
+    if (adminListsPanel) {
+      adminListsPanel.hidden = active !== 'lists';
+      if (active === 'lists' && window.DPRUserPaperLists && typeof window.DPRUserPaperLists.bind === 'function') {
+        window.DPRUserPaperLists.bind(adminListsPanel);
+      }
+    }
     if (panel) {
       panel.classList.toggle('is-conference-tab', active === 'conference');
       panel.classList.toggle('is-topic-tab', active === 'topic');
@@ -1017,7 +1025,7 @@ window.SubscriptionsManager = (function () {
   };
 
   const switchAdminPanelTab = (tab) => {
-    const nextTab = ['conference', 'topic'].includes(tab) ? tab : 'daily';
+    const nextTab = ['conference', 'topic', 'lists'].includes(tab) ? tab : 'daily';
     if (nextTab === 'topic') initializeTopicSelection();
     if (activeAdminPanelTab === nextTab) {
       syncAdminPanelTabs();
@@ -1493,6 +1501,7 @@ window.SubscriptionsManager = (function () {
                 会议论文
               </button>
               <button id="dpr-admin-tab-topic" class="dpr-admin-tab" type="button" role="tab" aria-selected="false" aria-controls="arxiv-topic-control-side">专题研究</button>
+              <button id="dpr-admin-tab-lists" class="dpr-admin-tab" type="button" role="tab" aria-selected="false" aria-controls="dpr-admin-lists-side">阅读清单</button>
             </div>
           </div>
           <div style="display:flex; gap:8px; align-items:center;">
@@ -1617,6 +1626,9 @@ window.SubscriptionsManager = (function () {
           <div id="arxiv-topic-control-side" class="dpr-admin-task-panel" role="tabpanel" aria-labelledby="dpr-admin-tab-topic" hidden>
             ${window.DPRTopicResearch ? window.DPRTopicResearch.render() : '<p class="dpr-task-hint">专题模块尚未加载，请刷新重试。</p>'}
           </div>
+          <div id="dpr-admin-lists-side" class="dpr-admin-task-panel" role="tabpanel" aria-labelledby="dpr-admin-tab-lists" hidden>
+            ${window.DPRUserPaperLists ? window.DPRUserPaperLists.render() : '<p class="dpr-task-hint">阅读清单模块尚未加载，请刷新重试。</p>'}
+          </div>
         </div>
       </div>
     `;
@@ -1633,6 +1645,9 @@ window.SubscriptionsManager = (function () {
     adminConferencePanel = document.getElementById('arxiv-conference-control-side');
     adminTopicTabBtn = document.getElementById('dpr-admin-tab-topic');
     adminTopicPanel = document.getElementById('arxiv-topic-control-side');
+    adminListsPanel = document.getElementById('dpr-admin-lists-side');
+    adminListsTabBtn = document.getElementById('dpr-admin-tab-lists');
+    if (adminListsTabBtn) adminListsTabBtn.addEventListener('click', () => switchAdminPanelTab('lists'));
     topicProfilePickerEl = document.getElementById('arxiv-admin-topic-profile-picker');
     if (adminTopicTabBtn) adminTopicTabBtn.addEventListener('click', () => switchAdminPanelTab('topic'));
     const topicInvitation = document.getElementById('dpr-admin-go-topic');

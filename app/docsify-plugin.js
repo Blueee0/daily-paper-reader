@@ -54,6 +54,8 @@ window.$docsify = {
       const DETAIL_MARKER = '【🧩 论文详细总结区】';
       const DETAIL_MARKER_LEGACY = '【🧩 论文详细总结】';
       let latestPaperRawMarkdown = '';
+      // 当前论文页解析出的 front matter 元数据（reading_section 等字段供操作栏使用）
+      let latestPaperMeta = null;
 
       const extractSectionByTitle = (rawContent, matchFn) => {
         if (!rawContent || typeof rawContent !== 'string') return '';
@@ -1611,6 +1613,66 @@ window.$docsify = {
         body.classList.toggle('dpr-paper-page', !!isPaperPage);
       };
 
+      // 首页公告折叠状态记忆（<details> 原生折叠，这里只负责恢复与持久化）
+      const HOME_NOTICE_COLLAPSE_KEY = 'dpr_home_notice_collapsed';
+      const setupHomeNoticeCollapse = () => {
+        const details = document.querySelector('.dpr-home-notice-details');
+        if (!details || details.dataset.collapseBound === '1') return;
+        details.dataset.collapseBound = '1';
+        try {
+          details.open = window.localStorage.getItem(HOME_NOTICE_COLLAPSE_KEY) !== '1';
+        } catch {
+          details.open = true;
+        }
+        details.addEventListener('toggle', () => {
+          try {
+            window.localStorage.setItem(HOME_NOTICE_COLLAPSE_KEY, details.open ? '0' : '1');
+          } catch {
+            // ignore
+          }
+        });
+      };
+
+      // 首页流水线状态条：在公告卡片底部注入挂载节点并交由 workflows.runner 填充。
+      const mountHomeWorkflowStatusChip = () => {
+        const noticeCard =
+          document.querySelector('.dpr-home-notice-card') ||
+          document.querySelector('.dpr-home-panel');
+        if (!noticeCard) return;
+        let chip = document.getElementById('dpr-home-status-chip');
+        if (!chip || !noticeCard.contains(chip)) {
+          if (chip) chip.remove();
+          chip = document.createElement('div');
+          chip.id = 'dpr-home-status-chip';
+          chip.className = 'dpr-home-status-chip';
+          const statsBlock = noticeCard.querySelector('.dpr-home-site-stats');
+          if (statsBlock && statsBlock.parentNode === noticeCard) {
+            noticeCard.insertBefore(chip, statsBlock);
+          } else {
+            noticeCard.appendChild(chip);
+          }
+        }
+        const runner = window.DPRWorkflowRunner;
+        if (runner && typeof runner.mountHomeStatusChip === 'function') {
+          runner.mountHomeStatusChip();
+          return;
+        }
+        // workflows.runner.js 属于第二阶段延迟加载：就绪后再挂载一次。
+        if (!mountHomeWorkflowStatusChip._waitingDeferred) {
+          mountHomeWorkflowStatusChip._waitingDeferred = true;
+          document.addEventListener(
+            'dpr-deferred-assets-ready',
+            () => {
+              const deferredRunner = window.DPRWorkflowRunner;
+              if (deferredRunner && typeof deferredRunner.mountHomeStatusChip === 'function') {
+                deferredRunner.mountHomeStatusChip();
+              }
+            },
+            { once: true },
+          );
+        }
+      };
+
       const applyPaperTitleBar = () => {
         const file = vm && vm.route ? vm.route.file : '';
         if (!isPaperRouteFile(file)) {
@@ -1680,6 +1742,149 @@ window.$docsify = {
           if (cnEl && cnTitle) fitTextToBox(cnEl, 14, 22);
           if (enEl && enTitle) fitTextToBox(enEl, 13, 20);
         });
+      };
+
+      // 论文页操作栏：下载 Markdown + ✓/✗ 已读标记（✓=good，✗=bad，复用侧栏状态系统）
+      const downloadTextFile = (filename, text, mime) => {
+        const blob = new Blob([text], { type: `${mime || 'text/plain'};charset=utf-8` });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      };
+
+      const resolvePaperRawMarkdown = async (file) => {
+        if (typeof latestPaperRawMarkdown === 'string' && latestPaperRawMarkdown.trim()) {
+          return latestPaperRawMarkdown;
+        }
+        const res = await fetch(`docs/${file}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`读取论文 Markdown 失败：HTTP ${res.status}`);
+        return res.text();
+      };
+
+      const syncPaperActionBarState = (bar, paperId) => {
+        let status = '';
+        try {
+          status = String(
+            (window.DPRSidebar && window.DPRSidebar.getReadState
+              ? window.DPRSidebar.getReadState()[paperId]
+              : '') || '',
+          );
+        } catch {
+          status = '';
+        }
+        const goodBtn = bar.querySelector('[data-action="mark-good"]');
+        const badBtn = bar.querySelector('[data-action="mark-bad"]');
+        if (goodBtn) goodBtn.classList.toggle('is-active', status === 'good');
+        if (badBtn) badBtn.classList.toggle('is-active', status === 'bad');
+      };
+
+      const applyPaperActionBar = () => {
+        const file = vm && vm.route ? vm.route.file : '';
+        if (!isPaperRouteFile(file)) return;
+        const section = document.querySelector('.markdown-section');
+        if (!section) return;
+        const root =
+          section.querySelector(`:scope > .${DPR_PAGE_CONTENT_CLASS}`) || section;
+        const existing = root.querySelector('.dpr-paper-action-bar');
+        if (existing) existing.remove();
+
+        const paperId = getPaperId();
+        const bar = document.createElement('div');
+        bar.className = 'dpr-paper-action-bar';
+        const deepReading = latestPaperMeta && String(latestPaperMeta.reading_section || '') === 'deep';
+        bar.innerHTML = `
+          <button type="button" class="dpr-paper-action-btn" data-action="download-md" title="下载本页 Markdown 源文件">⬇ 下载 Markdown</button>
+          ${deepReading ? '<button type="button" class="dpr-paper-action-btn" data-action="deep-reading" title="用自定义 12 节 Prompt 在浏览器内生成精读报告">📖 生成精读报告</button>' : ''}
+          <span class="dpr-paper-action-sep" aria-hidden="true"></span>
+          <button type="button" class="dpr-paper-action-btn dpr-paper-mark-good" data-action="mark-good" title="标记：已读过，且认为重要">✓ 已读·重要</button>
+          <button type="button" class="dpr-paper-action-btn dpr-paper-mark-bad" data-action="mark-bad" title="标记：已读过，但认为不重要">✗ 已读·不重要</button>
+        `;
+        const titleBar = root.querySelector('.dpr-title-bar');
+        if (titleBar && titleBar.parentNode === root) {
+          titleBar.insertAdjacentElement('afterend', bar);
+        } else {
+          root.insertBefore(bar, root.firstChild);
+        }
+
+        bar.addEventListener('click', async (e) => {
+          const btn = e.target.closest('[data-action]');
+          if (!btn || !bar.contains(btn)) return;
+          const action = btn.getAttribute('data-action');
+          if (action === 'download-md') {
+            btn.disabled = true;
+            try {
+              const text = await resolvePaperRawMarkdown(file);
+              const base = String(file || '').replace(/\.md$/i, '').split('/').pop() || 'paper';
+              downloadTextFile(`${base}.md`, text, 'text/markdown');
+            } catch (err) {
+              console.error(err);
+              btn.textContent = '下载失败';
+              setTimeout(() => {
+                btn.textContent = '⬇ 下载 Markdown';
+              }, 1800);
+            } finally {
+              btn.disabled = false;
+            }
+            return;
+          }
+          if (action === 'mark-good' || action === 'mark-bad') {
+            if (!paperId) return;
+            const sidebar = window.DPRSidebar;
+            if (!sidebar || typeof sidebar.markRead !== 'function') return;
+            const target = action === 'mark-good' ? 'good' : 'bad';
+            let current = '';
+            try {
+              current = String((sidebar.getReadState && sidebar.getReadState()[paperId]) || '');
+            } catch {
+              current = '';
+            }
+            // 再次点击同一标记 → 回退为普通已读
+            const next = current === target ? 'read' : target;
+            sidebar.markRead(paperId, next);
+            syncPaperActionBarState(bar, paperId);
+            return;
+          }
+          if (action === 'deep-reading') {
+            const deep = window.DPRDeepReading;
+            if (!deep || typeof deep.generateForPage !== 'function') return;
+            deep.generateForPage(paperId);
+          }
+        });
+
+        syncPaperActionBarState(bar, paperId);
+      };
+
+      // 精读报告块：仅精读论文挂载；模块属第二阶段加载，就绪后再挂载一次。
+      const mountDeepReadingReport = (paperId, routeFile) => {
+        const deep = window.DPRDeepReading;
+        if (deep && typeof deep.mountForPage === 'function') {
+          deep.mountForPage({
+            paperId,
+            routeFile,
+            meta: latestPaperMeta,
+          });
+          return;
+        }
+        if (!mountDeepReadingReport._waitingDeferred) {
+          mountDeepReadingReport._waitingDeferred = true;
+          document.addEventListener(
+            'dpr-deferred-assets-ready',
+            () => {
+              const deferredDeep = window.DPRDeepReading;
+              const id = getPaperId();
+              const file = vm && vm.route ? vm.route.file : '';
+              if (deferredDeep && typeof deferredDeep.mountForPage === 'function' && isPaperRouteFile(file)) {
+                deferredDeep.mountForPage({ paperId: id, routeFile: file, meta: latestPaperMeta });
+              }
+            },
+            { once: true },
+          );
+        }
       };
 
       // 论文页导航：左右滑动 / 键盘方向键切换论文
@@ -3204,14 +3409,17 @@ window.$docsify = {
         // 只对论文页面处理
         if (!isPaperRouteFile(file)) {
           latestPaperRawMarkdown = '';
+          latestPaperMeta = null;
           return content;
         }
         latestPaperRawMarkdown = content || '';
 
         const { meta, body } = parseFrontMatter(content);
         if (!meta) {
+          latestPaperMeta = null;
           return content;
         }
+        latestPaperMeta = meta;
 
         // 生成论文页面 HTML + 正文
         // ★ 保护正文中的 LaTeX 公式不被 marked 破坏
@@ -3332,6 +3540,10 @@ window.$docsify = {
         const isPaperPage = isPaperRouteFile(file);
         const isLandingLikePage = isHomePage || isReportPage;
         syncPageTypeClasses({ isHomePage, isReportPage, isPaperPage });
+        if (isHomePage) {
+          setupHomeNoticeCollapse();
+          mountHomeWorkflowStatusChip();
+        }
         closePdfPreview();
         document.querySelectorAll('[data-paper-media-modal]').forEach((modal) => {
           modal.classList.remove('is-open', 'is-closing', 'is-fullscreen');
@@ -3348,6 +3560,10 @@ window.$docsify = {
 
         // 论文页标题条排版（只对 docs/YYYYMM/DD/*.md 生效）
         applyPaperTitleBar();
+        applyPaperActionBar();
+        if (isPaperPage && latestPaperMeta && String(latestPaperMeta.reading_section || '') === 'deep') {
+          mountDeepReadingReport(paperId, file);
+        }
         bindPdfPreviewToggle();
 
         // 论文页左右切换：更新导航列表并绑定事件（只绑定一次）

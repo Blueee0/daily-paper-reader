@@ -7,7 +7,9 @@ const {
   resolveChatModels,
   resolveSummaryLLM,
   inferProviderType,
+  getProviderPreset,
   getDeepSeekPreset,
+  PROVIDER_PRESETS,
   inferChatApiProfile,
   resolveJsonResponseMode,
   isDeepSeekV4Model,
@@ -89,11 +91,21 @@ function testInferProviderType() {
     inferProviderType({
       summarizedLLM: {
         apiKey: 'sk',
+        baseUrl: 'https://api.siliconflow.cn/v1',
+        model: 'Qwen/Qwen3-32B',
+      },
+    }),
+    'siliconflow',
+  );
+  assert.equal(
+    inferProviderType({
+      summarizedLLM: {
+        apiKey: 'sk',
         baseUrl: 'https://example.com/v1',
         model: 'other-model',
       },
     }),
-    'deepseek',
+    'custom',
   );
 }
 
@@ -113,13 +125,24 @@ function testGetDeepSeekPreset() {
   assert.equal(getDeepSeekPreset('other-d'), null);
 }
 
+function testProviderPresets() {
+  for (const key of ['deepseek', 'siliconflow', 'openai', 'openrouter', 'custom']) {
+    assert.ok(PROVIDER_PRESETS[key], `missing preset: ${key}`);
+  }
+  assert.equal(getProviderPreset('siliconflow').baseUrl, 'https://api.siliconflow.cn/v1');
+  assert.equal(getProviderPreset('openrouter').baseUrl, 'https://openrouter.ai/api/v1');
+  assert.deepEqual(getProviderPreset('custom').models, []);
+}
+
 function testInferChatApiProfile() {
   assert.equal(
     inferChatApiProfile('https://api.deepseek.com', 'deepseek-v4-flash'),
     'deepseek',
   );
-  assert.equal(inferChatApiProfile('https://example.com/v1', 'other-model'), 'unsupported');
-  assert.equal(inferChatApiProfile('https://example.com/v1', 'other-model'), 'unsupported');
+  assert.equal(inferChatApiProfile('https://api.openai.com/v1', 'gpt-4o-mini'), 'openai');
+  assert.equal(inferChatApiProfile('https://example.com/v1', 'other-model'), 'custom');
+  // 未配置任何端点时保持旧行为
+  assert.equal(inferChatApiProfile('', ''), 'deepseek');
 }
 
 function testResolveJsonResponseMode() {
@@ -256,6 +279,7 @@ testSanitizeModelList();
 testResolveChatModelsAndSummary();
 testInferProviderType();
 testGetDeepSeekPreset();
+testProviderPresets();
 testInferChatApiProfile();
 testResolveJsonResponseMode();
 testResolveMaxOutputTokens();

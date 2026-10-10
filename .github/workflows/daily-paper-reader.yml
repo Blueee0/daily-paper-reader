@@ -2,6 +2,7 @@ name: daily-paper-reader
 
 on:
   schedule:
+    # DPR-SCHEDULE-CRON-ANCHOR: 前端“运行计划”面板会替换下面这行 cron，请保留本注释。
     - cron: "30 18 * * *" # 北京时间次日 02:30（UTC 18:30）
   workflow_dispatch:
     inputs:
@@ -45,6 +46,9 @@ jobs:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       DEEPSEEK_BASE_URL: ${{ secrets.DEEPSEEK_BASE_URL }}
       DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+      LLM_MODEL: ${{ secrets.LLM_MODEL }}
       RERANK_PROFILE: ${{ github.event.inputs.reranker_profile || secrets.RERANK_PROFILE || 'public-zwwen-rerank' }}
       RERANK_PROVIDER: ${{ secrets.RERANK_PROVIDER }}
       RERANK_MODEL: ${{ secrets.RERANK_MODEL }}
@@ -70,6 +74,7 @@ jobs:
     steps:
       - name: Random delay to spread scheduled runs
         if: github.event_name == 'schedule'
+        # DPR-SCHEDULE-JITTER-ANCHOR: 前端“运行计划”面板会替换下面的 shuf 范围，请保留本注释。
         run: |
           DELAY=$(shuf -i 0-3599 -n 1)
           echo "Sleeping ${DELAY}s (≈$((DELAY/60))min) to stagger fork runs over 1 hour …"
@@ -227,6 +232,9 @@ jobs:
           paths=(docs config.yaml)
           if [ -f archive/arxiv_seen.json ]; then
             paths+=(archive/arxiv_seen.json)
+          fi
+          if [ -f archive/user_read.json ]; then
+            paths+=(archive/user_read.json)
           fi
           if [ -f archive/crawl_state.json ]; then
             paths+=(archive/crawl_state.json)

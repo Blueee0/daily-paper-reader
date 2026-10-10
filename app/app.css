@@ -6,6 +6,20 @@
   --dpr-paper-content-max-width: 780px;
   --dpr-paper-content-gap-desktop: 120px;
   --dpr-paper-content-gap-mobile: 36px;
+
+  /* DPR 浅色设计 token（只新增，不改既有变量语义） */
+  --dpr-ink: #22302a;
+  --dpr-ink-soft: #4d5b54;
+  --dpr-ink-muted: #8a958f;
+  --dpr-accent: #2f7a55;
+  --dpr-accent-soft: #e8f3ec;
+  --dpr-border: #e3e9e5;
+  --dpr-border-strong: #ccd6d0;
+  --dpr-surface: #ffffff;
+  --dpr-surface-soft: #fbfcfb;
+  --dpr-radius-card: 12px;
+  --dpr-radius-btn: 8px;
+  --dpr-shadow-card: 0 1px 2px rgba(18, 42, 32, 0.05), 0 1px 6px rgba(18, 42, 32, 0.03);
 }
 
 /* 全局缩放重置为1 */
@@ -89,11 +103,11 @@ html {
 .markdown-section .dpr-home-notice-card,
 .markdown-section .dpr-home-promo-card {
   position: relative;
-  padding: 15px 17px 13px;
-  border: 1px solid #dfe7e2;
-  border-radius: 6px;
-  background: #fbfcfb;
-  box-shadow: none;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--dpr-border);
+  border-radius: var(--dpr-radius-card);
+  background: var(--dpr-surface-soft);
+  box-shadow: var(--dpr-shadow-card);
 }
 
 .markdown-section .dpr-home-notice-card {
@@ -110,7 +124,41 @@ html {
   justify-content: space-between;
   gap: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e4ebe7;
+  border-bottom: 1px solid var(--dpr-border);
+}
+
+/* 公告与更新折叠：<details>/<summary> 原生折叠，状态由前端记忆 */
+.markdown-section .dpr-home-notice-details > summary.dpr-home-panel-header {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.markdown-section .dpr-home-notice-details > summary.dpr-home-panel-header::-webkit-details-marker,
+.markdown-section .dpr-home-notice-details > summary.dpr-home-panel-header::marker {
+  display: none;
+  content: '';
+}
+
+.markdown-section .dpr-home-notice-details > summary.dpr-home-panel-header:focus-visible {
+  outline: 2px solid #2f7a55;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.markdown-section .dpr-home-notice-toggle {
+  display: inline-block;
+  color: #6c7771;
+  font-size: 0.8rem;
+  transition: transform 0.16s ease;
+}
+
+.markdown-section .dpr-home-notice-details[open] .dpr-home-notice-toggle {
+  transform: rotate(180deg);
+}
+
+.markdown-section .dpr-home-notice-body {
+  padding-top: 11px;
 }
 
 .markdown-section .dpr-home-notice-title,
@@ -180,6 +228,28 @@ html {
   color: #46534d;
   font-size: 0.86rem;
   line-height: 1.55;
+}
+
+/* 首页每日流水线状态条（workflows.runner.mountHomeStatusChip 填充） */
+.markdown-section .dpr-home-status-chip {
+  margin-top: 10px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: #46534d;
+}
+
+.markdown-section .dpr-home-status-chip a:hover strong {
+  text-decoration: underline;
+}
+
+@keyframes dpr-home-chip-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .markdown-section .dpr-home-site-stats[hidden] {
@@ -2477,11 +2547,12 @@ body.dpr-paper-page .dpr-title-bar {
   display: flex;
   align-items: stretch;
   gap: 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   margin: 0 0 10px 0;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid var(--dpr-border);
+  border-radius: var(--dpr-radius-card);
+  background: var(--dpr-surface);
+  box-shadow: var(--dpr-shadow-card);
   height: 96px; /* 固定高度：约 3 行（受 line-height 影响） */
   overflow: hidden;
 }
@@ -2524,6 +2595,192 @@ body.dpr-paper-page .dpr-title-sep {
 body.dpr-paper-page .dpr-title-bar.dpr-title-single .dpr-title-sep,
 body.dpr-paper-page .dpr-title-bar.dpr-title-single .dpr-title-en {
   display: none;
+}
+
+/* 论文页操作栏：下载 Markdown + ✓/✗ 已读标记 */
+body.dpr-paper-page .dpr-paper-action-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0 0 10px 0;
+  border: 1px solid var(--dpr-border);
+  border-radius: var(--dpr-radius-card);
+  background: var(--dpr-surface);
+  box-shadow: var(--dpr-shadow-card);
+}
+
+body.dpr-paper-page .dpr-paper-action-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+body.dpr-paper-page .dpr-paper-action-btn {
+  appearance: none;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #fff;
+  color: #444;
+  font-size: 12.5px;
+  line-height: 1;
+  padding: 7px 11px;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+body.dpr-paper-page .dpr-paper-action-btn:hover:not(:disabled) {
+  background: #f4f6f5;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+body.dpr-paper-page .dpr-paper-action-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+body.dpr-paper-page .dpr-paper-action-btn.is-active.dpr-paper-mark-good {
+  background: #e8f3ec;
+  border-color: #2e7d32;
+  color: #22662f;
+  font-weight: 600;
+}
+
+body.dpr-paper-page .dpr-paper-action-btn.is-active.dpr-paper-mark-bad {
+  background: #fdecea;
+  border-color: #c0392b;
+  color: #a33024;
+  font-weight: 600;
+}
+
+/* 阅读清单面板（后台管理 → 阅读清单页签） */
+.dpr-upl-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dpr-upl-block {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.dpr-upl-block-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dpr-upl-count {
+  font-size: 12px;
+  color: #666;
+}
+
+.dpr-upl-block-head .dpr-upl-export-btn {
+  margin-left: auto;
+}
+
+.dpr-upl-note {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.dpr-upl-items {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.dpr-upl-item {
+  font-size: 12.5px;
+  color: #333;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dpr-upl-more {
+  color: #999;
+}
+
+.dpr-upl-import {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+/* 精读报告折叠块（前端按需生成，IndexedDB 本地保存） */
+body.dpr-paper-page .dpr-deep-reading-block {
+  margin: 0 0 14px 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+  border-left: 3px solid #2e7d32;
+  border-radius: 12px;
+  background: #fbfdfb;
+}
+
+body.dpr-paper-page .dpr-deep-reading-block > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+body.dpr-paper-page .dpr-deep-reading-block > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.dpr-paper-page .dpr-deep-reading-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #22662f;
+}
+
+body.dpr-paper-page .dpr-deep-reading-status {
+  font-size: 12px;
+  color: #888;
+}
+
+body.dpr-paper-page .dpr-deep-reading-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+body.dpr-paper-page .dpr-deep-reading-body {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+body.dpr-paper-page .dpr-deep-reading-body h2 {
+  font-size: 17px;
+}
+
+body.dpr-paper-page .dpr-deep-reading-body h3 {
+  font-size: 15px;
+}
+
+body.dpr-paper-page .dpr-deep-reading-meta {
+  font-size: 12px;
+  color: #8a6d3b;
+  background: rgba(232, 243, 236, 0.6);
+  border-radius: 6px;
+  padding: 6px 10px;
 }
 
 /* 极窄屏：标题条改为上下布局，减少"卡片里只剩一条窄列"的观感 */
@@ -8855,4 +9112,94 @@ body.dpr-dark .dpr-sidebar-footer-btn {
   background: #1e293b;
   border-color: #334155;
   color: #cbd5e1;
+}
+
+/* ============================================================== */
+/* ========== 浅色主题排版精修（作用域限定，不改侧栏） ========== */
+/* ============================================================== */
+
+/* 正文阅读节奏 */
+.markdown-section {
+  color: var(--dpr-ink);
+  line-height: 1.75;
+}
+
+.markdown-section h2 {
+  margin-top: 1.6em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--dpr-border);
+}
+
+.markdown-section h3 {
+  margin-top: 1.4em;
+}
+
+.markdown-section a {
+  color: var(--dpr-accent);
+}
+
+.markdown-section blockquote {
+  border-left: 3px solid var(--dpr-accent);
+  background: var(--dpr-surface-soft);
+  color: var(--dpr-ink-soft);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 16px;
+  margin: 14px 0;
+}
+
+.markdown-section hr {
+  border: none;
+  border-top: 1px solid var(--dpr-border);
+  margin: 22px 0;
+}
+
+.markdown-section code {
+  background: var(--dpr-surface-soft);
+  border: 1px solid var(--dpr-border);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.markdown-section table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-section thead th {
+  background: var(--dpr-surface-soft);
+}
+
+.markdown-section th,
+.markdown-section td {
+  border: 1px solid var(--dpr-border);
+  padding: 6px 10px;
+}
+
+/* 论文页语义色统一：从主题红收敛为墨绿 accent */
+body.dpr-paper-page .paper-meta-left p strong,
+body.dpr-paper-page .paper-meta-right p strong {
+  color: var(--dpr-accent);
+  font-weight: 650;
+}
+
+body.dpr-paper-page .paper-glance-col {
+  background: var(--dpr-surface-soft);
+  border: 1px solid var(--dpr-border);
+  border-radius: 10px;
+  padding: 12px 13px;
+}
+
+body.dpr-paper-page .paper-glance-label,
+body.dpr-paper-page .markdown-section .paper-glance-label {
+  color: var(--dpr-accent) !important;
+  border-bottom: 1px solid rgba(47, 122, 85, 0.22);
+}
+
+body.dpr-paper-page .paper-glance-content {
+  color: var(--dpr-ink-soft);
+}
+
+body.dpr-paper-page .paper-glance-tldr {
+  background: var(--dpr-accent-soft);
+  border-radius: 10px;
 }
