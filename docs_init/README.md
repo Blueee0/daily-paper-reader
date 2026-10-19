@@ -1,5 +1,5 @@
 <div class="dpr-home-notice-card dpr-home-panel">
-  <details class="dpr-home-notice-details" open>
+  <details class="dpr-home-notice-details">
     <summary class="dpr-home-notice-header dpr-home-panel-header">
       <h3 class="dpr-home-notice-title">公告与更新</h3>
       <span style="display:flex; align-items:center; gap:8px;">

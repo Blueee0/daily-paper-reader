@@ -111,6 +111,10 @@ class ClientFactoryTest(unittest.TestCase):
 
 
 class ThinkingFieldGateTest(unittest.TestCase):
+    def test_third_party_deepseek_model_is_not_official_dialect(self):
+        client = LLMClient(api_key='test', model='deepseek-v4-flash', base_url='https://gateway.example/v1')
+        self.assertNotEqual(client._provider_name(), 'deepseek')
+
     def _mock_response(self):
         resp = MagicMock()
         resp.raise_for_status.return_value = None

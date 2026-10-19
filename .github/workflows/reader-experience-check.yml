@@ -1,0 +1,68 @@
+name: Verify reader experience
+on:
+  push:
+    branches: ['codex/reader-experience']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install cloud-only runtime
+        run: python -m pip install -r requirements.txt pytest pytest-subtests
+      - name: Assert lightweight environment
+        run: |
+          python - <<'PY'
+          import importlib.util
+          for name in ('torch', 'transformers', 'sentence_transformers'):
+              assert importlib.util.find_spec(name) is None, name
+          PY
+      - name: Regression tests
+        run: python -m pytest -q
+      - name: JavaScript regression
+        run: |
+          for test in tests/test_*.js; do node "$test" || exit 1; done
+      - name: Generate one real report in isolated output
+        env:
+          DPR_MODELS_REMOTE_ONLY: '1'
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.SUMMARY_API_KEY || secrets.DEEPSEEK_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || secrets.SUMMARY_BASE_URL || secrets.DEEPSEEK_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL || secrets.SUMMARY_MODEL || secrets.DEEPSEEK_MODEL }}
+          SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os, shutil, sys
+          from pathlib import Path
+          sys.path.insert(0, 'src')
+          from llm import ClientFactory
+          from deep_reading import generate_report
+          if not os.getenv('LLM_API_KEY'):
+              raise SystemExit('缺少工作流 LLM Key，未执行付费报告验证。')
+          output = Path(os.environ['RUNNER_TEMP']) / 'reader-report-smoke'
+          output.mkdir()
+          source = Path('docs_init/201706/12/1706.03762v1-attention-is-all-you-need')
+          for suffix in ('.md', '.txt'):
+              shutil.copyfile(str(source) + suffix, output / ('paper' + suffix))
+          client = ClientFactory.from_env()
+          report = generate_report(output / 'paper.md', output / 'paper.txt', client, max_attempts=2)
+          assert '## 12.' in report and '## 参考资料' in report
+          # Published sidecars must prevent an identical repeat from making paid requests.
+          client.chat = lambda **_: (_ for _ in ()).throw(AssertionError('unexpected repeated model call'))
+          assert generate_report(output / 'paper.md', output / 'paper.txt', client) == report
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('单篇全文、文献检索、十二节报告与已发布结果复用验证完成。未修改正式 docs。\n')
+          PY
+      - name: Upload isolated smoke output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reader-report-smoke
+          path: ${{ runner.temp }}/reader-report-smoke/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -52,6 +52,9 @@ def build_secret_env(secret: dict[str, Any] | None) -> dict[str, str]:
         model = norm_text(first_chat.get("models")[0])
 
     env: dict[str, str] = {}
+    literature = secret.get('literatureSearch') or {}
+    if isinstance(literature, dict):
+        env['SEMANTIC_SCHOLAR_API_KEY'] = norm_text(literature.get('apiKey'))
     if summarized or first_chat:
         env["LLM_API_KEY"] = api_key
         env["SUMMARY_API_KEY"] = api_key

@@ -25,9 +25,16 @@ CONFIG_FILE = os.getenv("DPR_CONFIG_FILE") or os.path.join(ROOT_DIR, "config.yam
 LONG_RANGE_DAYS_THRESHOLD = 10
 MAIN_DEFAULT_DAYS = 9
 SKIMS_FETCH_DAYS_THRESHOLD = 11
+STAGES = ('all', 'initialize', 'enrich', 'fetch', 'bm25', 'embedding', 'fusion', 'rerank', 'refine', 'select', 'docs', 'review')
+SELECTED_STAGE = 'all'
+STEP_STAGES = {'0': 'enrich', '1': 'fetch', '2.1': 'bm25', '2.2': 'embedding',
+               '2.3': 'fusion', '3': 'rerank', '4': 'refine', '5': 'select', '6': 'docs'}
 
 
 def run_step(label: str, args: list[str], env: dict[str, str] | None = None) -> None:
+    step = label.split(' - ', 1)[0].replace('Step ', '')
+    if SELECTED_STAGE != 'all' and STEP_STAGES.get(step) != SELECTED_STAGE:
+        return
     print(f"[INFO] {label}: {' '.join(args)}", flush=True)
     subprocess.run(args, check=True, env=env)
 
@@ -512,6 +519,7 @@ def print_trace_recommend(stage: str, path: str, trace_ids: list[str]) -> None:
 
 
 def main() -> None:
+    global SELECTED_STAGE
     parser = argparse.ArgumentParser(
         description="Daily Paper Reader pipeline (steps 0~6).",
     )
@@ -572,14 +580,39 @@ def main() -> None:
         action="store_false",
         help="强制执行 Step 1（全量数据拉取），即使 Supabase 已启用。",
     )
+    parser.add_argument('--stage', choices=STAGES, default='all', help='Actions 与本地共用的执行阶段。')
+    parser.add_argument('--context-file', help='initialize 固定运行参数；后续阶段只读取该快照。')
     args = parser.parse_args()
+    SELECTED_STAGE = args.stage
+    context = None
+    if args.context_file and args.stage != 'initialize':
+        with open(args.context_file, encoding='utf-8') as handle:
+            context = json.load(handle)
+        if context.get('version') != 1:
+            parser.error('不支持的运行上下文版本')
+        for key, value in context['arguments'].items():
+            if key not in ('stage', 'context_file'):
+                setattr(args, key, value)
+    if args.stage == 'initialize' and not args.context_file:
+        parser.error('--stage initialize 需要 --context-file')
     if args.fetch_days is not None and not 1 <= args.fetch_days <= 365:
         parser.error('--fetch-days 必须在 1–365 天之间')
 
     python = sys.executable
 
-    sidebar_date_label = resolve_sidebar_date_label(args.fetch_days)
-    run_date_token = resolve_run_date_token(args.fetch_days)
+    sidebar_date_label = context['sidebar_date_label'] if context else resolve_sidebar_date_label(args.fetch_days)
+    run_date_token = context['run_date_token'] if context else resolve_run_date_token(args.fetch_days)
+    if not context and re.fullmatch(r'\d{8}-\d{8}', run_date_token):
+        start, end = run_date_token.split('-')
+        sidebar_date_label = f'{start[:4]}-{start[4:6]}-{start[6:]} ~ {end[:4]}-{end[4:6]}-{end[6:]}'
+    if args.stage == 'initialize':
+        arguments = {key: value for key, value in vars(args).items() if key not in ('stage', 'context_file')}
+        # 日期及跳过抓取决策固定在同一个初始化时刻，跨午夜分阶段运行仍使用同一目录。
+        if arguments['skip_fetch'] is None:
+            arguments['skip_fetch'] = should_skip_fetch()
+        save_json(args.context_file, {'version': 1, 'arguments': arguments,
+                  'run_date_token': run_date_token, 'sidebar_date_label': sidebar_date_label})
+        return
     os.environ["DPR_RUN_DATE"] = run_date_token
     print(f"[INFO] DPR_RUN_DATE={run_date_token}", flush=True)
     profile_tag = str(args.profile_tag or os.getenv("DPR_FILTER_PROFILE_TAG") or "").strip()
@@ -591,6 +624,8 @@ def main() -> None:
         os.environ.pop("DPR_FILTER_PROFILE_TAG", None)
         os.environ.pop("DPR_INCLUDE_CONFERENCE_ONLY_PROFILES", None)
     if args.fetch_days is not None and args.fetch_days > 30:
+        if args.stage not in ('all', 'review'):
+            return
         if args.skip_fetch is False:
             parser.error('31–365天专题回溯只读取Supabase，不支持 --no-skip-fetch')
         from long_range_review import run_review
@@ -598,6 +633,8 @@ def main() -> None:
         if args.run_enrich and args.fetch_days not in (90, 365):
             run_step('Step 0 - enrich config', [python, os.path.join(SRC_DIR, '0.enrich_config_queries.py')])
         run_review(_load_full_config(), args.fetch_days, ROOT_DIR, run_date_token)
+        return
+    if args.stage == 'review':
         return
     fetch_mode = (args.fetch_mode or "auto").strip().lower()
     if fetch_mode == "skims":

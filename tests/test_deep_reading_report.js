@@ -1,0 +1,11 @@
+const assert = require('node:assert/strict');
+const { extractReport, absoluteImages, parseRoutes } = require('../app/deep-reading-report.js');
+assert.equal(extractReport('# Paper\n<!-- DPR-DEEP-REPORT:BEGIN -->\n## 论文详细总结（自动生成）\n## 1. 分析\n结论\n<!-- DPR-DEEP-REPORT:END -->\n## 我的笔记\n私有笔记'), '## 1. 分析\n结论');
+assert.equal(extractReport('## 论文详细总结（自动生成）\n旧报告\n## 我的笔记\n不要导出'), '旧报告');
+assert.equal(extractReport('# Quick skim\n## 速览\nTLDR'), '');
+assert.equal(absoluteImages('![Figure](figures/a.png)', 'https://example.org/repo/docs/202610/19/paper.md'), '![Figure](https://example.org/repo/docs/202610/19/figures/a.png)');
+assert.deepEqual(parseRoutes('docs/202610/19/a.md,202610/19/a\n202610/19/b'), ['202610/19/a','202610/19/b']);
+assert.throws(() => parseRoutes('../secret'));
+assert.throws(() => parseRoutes('202610/../secret'));
+assert.throws(() => parseRoutes(Array.from({length:21}, (_,i)=>`202610/19/${i}`).join(',')));
+console.log('published report export and selection tests passed');

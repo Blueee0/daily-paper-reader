@@ -189,7 +189,7 @@ def _existing_routes(docs, generator):
     routes.update(
         str(path.relative_to(docs).with_suffix(""))
         for path in docs.rglob("*.md")
-        if not path.name.startswith("_")
+        if not path.name.startswith("_") and not path.name.endswith('.report.md')
     )
     for route in sorted(routes):
         text = (docs / (route + ".md")).read_text(encoding="utf-8")

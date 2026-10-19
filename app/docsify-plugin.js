@@ -1634,13 +1634,32 @@ window.$docsify = {
       // 首页公告折叠状态记忆（<details> 原生折叠，这里只负责恢复与持久化）
       const HOME_NOTICE_COLLAPSE_KEY = 'dpr_home_notice_collapsed';
       const setupHomeNoticeCollapse = () => {
-        const details = document.querySelector('.dpr-home-notice-details');
+        const card = document.querySelector('.dpr-home-notice-card');
+        if (!card) return;
+        let details = card.querySelector('.dpr-home-notice-details');
+        if (!details) {
+          // Older forks keep generated HTML. Adapt its visible structure without rewriting user docs.
+          details = document.createElement('details');
+          details.className = 'dpr-home-notice-details';
+          const summary = document.createElement('summary');
+          summary.className = 'dpr-home-notice-header dpr-home-panel-header';
+          const title = card.querySelector('h3');
+          if (title) summary.appendChild(title);
+          else summary.textContent = '公告与更新';
+          const content = document.createElement('div');
+          content.className = 'dpr-home-notice-body';
+          Array.from(card.children).forEach(child => {
+            if (!child.classList.contains('dpr-home-site-stats')) content.appendChild(child);
+          });
+          details.append(summary, content);
+          card.prepend(details);
+        }
         if (!details || details.dataset.collapseBound === '1') return;
         details.dataset.collapseBound = '1';
         try {
-          details.open = window.localStorage.getItem(HOME_NOTICE_COLLAPSE_KEY) !== '1';
+          details.open = window.localStorage.getItem(HOME_NOTICE_COLLAPSE_KEY) === '0';
         } catch {
-          details.open = true;
+          details.open = false;
         }
         details.addEventListener('toggle', () => {
           try {
@@ -1658,17 +1677,12 @@ window.$docsify = {
           document.querySelector('.dpr-home-panel');
         if (!noticeCard) return;
         let chip = document.getElementById('dpr-home-status-chip');
-        if (!chip || !noticeCard.contains(chip)) {
+        if (!chip || !chip.isConnected) {
           if (chip) chip.remove();
           chip = document.createElement('div');
           chip.id = 'dpr-home-status-chip';
           chip.className = 'dpr-home-status-chip';
-          const statsBlock = noticeCard.querySelector('.dpr-home-site-stats');
-          if (statsBlock && statsBlock.parentNode === noticeCard) {
-            noticeCard.insertBefore(chip, statsBlock);
-          } else {
-            noticeCard.appendChild(chip);
-          }
+          noticeCard.insertAdjacentElement('beforebegin', chip);
         }
         const runner = window.DPRWorkflowRunner;
         if (runner && typeof runner.mountHomeStatusChip === 'function') {
@@ -1812,12 +1826,15 @@ window.$docsify = {
         if (existing) existing.remove();
 
         const paperId = getPaperId();
+        if (latestPaperMeta && !latestPaperMeta.reading_section && Array.from(root.querySelectorAll('h2')).some(el => /论文详细总结（自动生成）/.test(el.textContent))) {
+          latestPaperMeta.reading_section = 'deep';
+        }
         const bar = document.createElement('div');
         bar.className = 'dpr-paper-action-bar';
         const deepReading = latestPaperMeta && String(latestPaperMeta.reading_section || '') === 'deep';
         bar.innerHTML = `
-          <button type="button" class="dpr-paper-action-btn" data-action="download-md" title="下载本页 Markdown 源文件">⬇ 下载 Markdown</button>
-          ${deepReading ? '<button type="button" class="dpr-paper-action-btn" data-action="deep-reading" title="用自定义 12 节 Prompt 在浏览器内生成精读报告">📖 生成精读报告</button>' : ''}
+          <button type="button" class="dpr-paper-action-btn" data-action="download-md" title="下载本页 Markdown 源文件">下载本页 Markdown</button>
+          ${deepReading ? '<button type="button" class="dpr-paper-action-btn" data-action="deep-reading" title="通过工作流补生成所选论文的十二节报告">补生成精读报告</button>' : ''}
           <span class="dpr-paper-action-sep" aria-hidden="true"></span>
           <button type="button" class="dpr-paper-action-btn dpr-paper-mark-good" data-action="mark-good" title="标记：已读过，且认为重要">✓ 已读·重要</button>
           <button type="button" class="dpr-paper-action-btn dpr-paper-mark-bad" data-action="mark-bad" title="标记：已读过，但认为不重要">✗ 已读·不重要</button>

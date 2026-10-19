@@ -141,7 +141,6 @@
     const normalizedModel = normalizeText(model || '').toLowerCase();
     if (
       /(^|\/\/)(api\.)?deepseek\.com(?::\d+)?(?:$|\/)/i.test(normalizedBaseUrl)
-      || normalizedModel.startsWith('deepseek-')
     ) {
       return 'deepseek';
     }
@@ -225,12 +224,13 @@
     if (maxTokens) {
       payload.max_tokens = maxTokens;
     }
+    if (/(^|\/)(?:gpt-5(?:[.-]|$)|o[134](?:[.-]|$))/i.test(model)) payload.max_completion_tokens = 8192;
     return payload;
   };
 
   const buildConnectivityTestPayload = ({ baseUrl, model }) => {
     const normalizedModel = normalizeText(model);
-    return {
+    const payload = {
       model: normalizedModel,
       messages: [
         {
@@ -245,6 +245,12 @@
       temperature: 0,
       max_tokens: 256,
     };
+    if (/(^|\/)(?:gpt-5(?:[.-]|$)|o[134](?:[.-]|$))/i.test(normalizedModel)) {
+      payload.max_completion_tokens = 256;
+      delete payload.max_tokens;
+      delete payload.temperature;
+    }
+    return payload;
   };
 
   return {

@@ -3,6 +3,7 @@
 
 window.DPRWorkflowRunner = (function () {
   const WORKFLOWS = [
+    { key: 'deep-reading-report', id: 'deep-reading-report.yml', name: '补生成精读报告', desc: '仅为明确选择的已有论文补内容，不重新检索评分。' },
     { key: 'topic-research', id: 'topic-research.yml', name: '专题研究', desc: '固定评审预算与最终结果名额，可继续生成内容。' },
     {
       key: 'starter-pack',
@@ -90,6 +91,29 @@ window.DPRWorkflowRunner = (function () {
   let selectedRun = null;
   const lastRunStateById = {};
   let repoContextCache = null;
+  const rememberRun = (value) => {
+    try { window.localStorage.setItem('dpr-workflow-active', JSON.stringify(value)); } catch {}
+  };
+  const restoreRun = async () => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('dpr-workflow-active') || 'null');
+      const { owner, repo } = await resolveRepoFromUrl(loadGithubToken());
+      if (saved?.pending && saved.owner === owner && saved.repo === repo) {
+        const res = await ghFetch(loadGithubToken(), `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${encodeURIComponent(saved.workflow)}/runs?event=workflow_dispatch&per_page=10`);
+        if (res.ok) {
+          const run = ((await res.json()).workflow_runs || []).find(item => Date.parse(item.created_at) >= Date.parse(saved.createdAt) - 5000);
+          if (run) { saved.runId = run.id; delete saved.pending; rememberRun(saved); }
+          else setStatus('已提交，GitHub 尚未返回运行记录；请查看最近运行，无需重复提交。', '#8a6325');
+        }
+      }
+      if (!saved || !saved.runId || saved.owner !== owner || saved.repo !== repo) return;
+      selectedRun = { ...saved, token: loadGithubToken() };
+      await refreshRun(owner, repo, saved.runId);
+      if (lastRunStateById[String(saved.runId)]?.startsWith('completed/')) return;
+      stopPolling();
+      refreshTimer = setInterval(() => refreshRun(owner, repo, saved.runId), POLL_INTERVAL_MS());
+    } catch { /* An unavailable local preference never blocks the run list. */ }
+  };
 
   const escapeHtml = (str) => {
     if (!str) return '';
@@ -143,6 +167,13 @@ window.DPRWorkflowRunner = (function () {
     if (githubPagesMatch) {
       return { owner: githubPagesMatch[1], repo: githubPagesMatch[2] };
     }
+    try {
+      const response = await fetch('docs/.repo-owner.json', { cache: 'no-cache' });
+      if (response.ok) {
+        const value = await response.json();
+        if (/^[A-Za-z0-9_.-]+$/.test(value.owner || '') && /^[A-Za-z0-9_.-]+$/.test(value.repo || '')) return { owner: value.owner, repo: value.repo };
+      }
+    } catch { /* A standalone preview may not have repository metadata. */ }
 
     // 非 GitHub Pages URL：回退到「Token 对应的用户 + daily-paper-reader」作为默认目标仓库
     try {
@@ -317,7 +348,8 @@ window.DPRWorkflowRunner = (function () {
   const parseCronToSchedule = (cron, utcOffsetMinutes) => {
     const parts = String(cron || '').trim().split(/\s+/);
     if (parts.length !== 5) return null;
-    const [minStr, hourStr, , , dayStr] = parts;
+    const [minStr, hourStr, dateStr, monthStr, dayStr] = parts;
+    if (dateStr !== '*' || monthStr !== '*' || Number(minStr) > 59 || Number(hourStr) > 23) return null;
     if (!/^\d{1,2}$/.test(minStr) || !/^\d{1,2}$/.test(hourStr)) return null;
     const offset = Number(utcOffsetMinutes) || 0;
     const rawLocalMinutes = Number(hourStr) * 60 + Number(minStr) + offset;
@@ -352,18 +384,24 @@ window.DPRWorkflowRunner = (function () {
   };
 
   // 替换锚点行并用 js-yaml 校验整体仍可解析、cron 已生效；失败即抛错，调用方放弃保存。
-  const applyScheduleToWorkflowYaml = (yamlText, { cron, jitterMinutes }) => {
+  const applyScheduleToWorkflowYaml = (yamlText, { cron, jitterMinutes, timezone }) => {
     let text = String(yamlText || '');
+    if ((text.match(/^\s*- cron:/gm) || []).length !== 1) throw new Error('当前为多条或未知计划，请在 GitHub 编辑，避免覆盖其他定时任务。');
     if (!CRON_ANCHOR_RE.test(text)) {
       throw new Error(
         '未找到 cron 锚点注释，无法安全修改执行计划（workflow 文件可能被手动改动过，请先同步或恢复锚点）。',
       );
     }
     text = text.replace(CRON_ANCHOR_RE, `$1"${cron}"`);
+    if (timezone !== undefined) {
+      const zone = new Intl.DateTimeFormat('en-US', { timeZone: timezone }).resolvedOptions().timeZone;
+      text = text.replace(/(^([ \t]*)- cron: "[^"]*")[^\n]*(?:\n\2  timezone:[^\n]*)?/m, `$1\n$2  timezone: "${zone}"`);
+    }
     if (Number.isFinite(Number(jitterMinutes))) {
       if (!JITTER_ANCHOR_RE.test(text)) {
         throw new Error('未找到随机延迟锚点，无法安全修改。');
       }
+      if (Number(jitterMinutes) < 0 || Number(jitterMinutes) > 60) throw new Error('随机延迟范围为 0–60 分钟。');
       const maxSeconds = Math.max(0, Math.round(Number(jitterMinutes))) * 60;
       text = text.replace(JITTER_ANCHOR_RE, `DELAY=$(shuf -i 0-${maxSeconds} -n 1)`);
     }
@@ -380,6 +418,7 @@ window.DPRWorkflowRunner = (function () {
         !Array.isArray(schedule) ||
         !schedule[0] ||
         String(schedule[0].cron || '').trim() !== String(cron).trim()
+        || (timezone !== undefined && schedule[0].timezone !== new Intl.DateTimeFormat('en-US', { timeZone: timezone }).resolvedOptions().timeZone)
       ) {
         throw new Error('修改后的 YAML 校验失败（cron 未生效），已取消保存。');
       }
@@ -576,10 +615,7 @@ window.DPRWorkflowRunner = (function () {
   };
 
   const resolveRecentRunTag = async (owner, repo, token, run) => {
-    if (!run) return 'daily-now';
-    // 统一归类到 daily-now，触发面板不再单独展示一个月/一个月标准入口
-    if (run.inputs && typeof run.inputs === 'object') return 'daily-now';
-    await resolveWorkflowRunInputs(owner, repo, token, run.id);
+    // These entries all belong to the same daily workflow; no per-run metadata request needed.
     return 'daily-now';
   };
 
@@ -622,7 +658,8 @@ window.DPRWorkflowRunner = (function () {
                 <label>每天
                   <input id="dpr-wf-schedule-time" type="time" style="padding:2px 4px; font-size:12px;">
                 </label>
-                <span style="color:#999;">（本地时间）执行</span>
+                <input id="dpr-wf-schedule-zone" aria-label="计划时区" list="dpr-schedule-zones" value="Asia/Shanghai" placeholder="IANA 时区">
+                <datalist id="dpr-schedule-zones"><option value="Asia/Shanghai"><option value="UTC"><option value="Asia/Tokyo"><option value="America/New_York"><option value="Europe/London"></datalist>
                 <button id="dpr-wf-schedule-save" class="arxiv-tool-btn" style="padding:3px 10px;">保存执行计划</button>
               </div>
               <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;">
@@ -635,12 +672,12 @@ window.DPRWorkflowRunner = (function () {
                 </label>
                 <span id="dpr-wf-schedule-days" style="display:none; gap:6px;"></span>
               </div>
-              <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px;">
+              <details class="dpr-schedule-advanced"><summary>高级：随机等待</summary><div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px;">
                 <label>随机延迟
-                  <input id="dpr-wf-schedule-jitter" type="number" min="0" max="55" step="1" style="width:52px; padding:2px 4px; font-size:12px;">
+                  <input id="dpr-wf-schedule-jitter" type="number" min="0" max="60" step="1" value="0" style="width:52px; padding:2px 4px; font-size:12px;">
                 </label>
                 <span style="color:#999;">分钟（GitHub 定时触发本身可能再延迟数分钟）</span>
-              </div>
+              </div></details>
               <div id="dpr-wf-schedule-preview" style="color:#666; margin-bottom:6px;"></div>
               <div id="dpr-wf-schedule-status" style="min-height:16px; color:#666;"></div>
             </div>
@@ -695,6 +732,7 @@ window.DPRWorkflowRunner = (function () {
     // 打开面板时尝试加载最近运行（不依赖触发）
     loadRecentRuns();
     initScheduleCard();
+    if (!selectedRun) restoreRun();
     return true;
   };
 
@@ -765,179 +803,108 @@ window.DPRWorkflowRunner = (function () {
       dayText = `自定义（周${(schedule.weekdays || []).map((d) => weekdayLabels[d]).join('、周')}）`;
     }
     const jitter = Number.isFinite(Number(jitterMinutes)) ? Number(jitterMinutes) : null;
-    return `每天 ${schedule.timeLocal}（本地时间）· ${dayText}` + (jitter !== null ? ` · 随机延迟 0-${jitter} 分钟` : '');
+    return `${dayText} ${schedule.timeLocal}` + (jitter !== null ? ` · 随机延迟 0-${jitter} 分钟` : '');
   };
 
-  const updateSchedulePreview = () => {
-    const previewEl = document.getElementById('dpr-wf-schedule-preview');
-    if (!previewEl) return;
-    try {
-      const cron = buildCronFromSchedule({
-        timeLocal: document.getElementById('dpr-wf-schedule-time').value,
-        dayMode: document.getElementById('dpr-wf-schedule-mode').value,
-        weekdays: Array.from(
-          document.querySelectorAll('#dpr-wf-schedule-days input[type="checkbox"]:checked'),
-        ).map((el) => Number(el.value)),
-        utcOffsetMinutes: currentUtcOffsetMinutes(),
-      });
-      previewEl.textContent = `将写入 cron：${cron}（UTC）`;
-      previewEl.style.color = '#666';
-    } catch (e) {
-      previewEl.textContent = e.message || String(e);
-      previewEl.style.color = '#c00';
+  const readScheduleForm = () => ({
+    timeLocal: document.getElementById('dpr-wf-schedule-time').value,
+    dayMode: document.getElementById('dpr-wf-schedule-mode').value,
+    weekdays: Array.from(document.querySelectorAll('#dpr-wf-schedule-days input:checked')).map(el => Number(el.value)),
+    timezone: document.getElementById('dpr-wf-schedule-zone').value.trim(),
+  });
+
+  const nextScheduledRun = (schedule, now = new Date()) => {
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: schedule.timezone,
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const weekdays = schedule.dayMode === 'daily' ? [0,1,2,3,4,5,6] : schedule.dayMode === 'workdays' ? [1,2,3,4,5] : schedule.weekdays;
+    const start = Math.floor(now.getTime() / 60000) * 60000 + 60000;
+    let previousParts = Object.fromEntries(formatter.formatToParts(start - 60000).map(x => [x.type, x.value]));
+    // UTC-minute scan handles fractional UTC offsets and DST skipped/repeated hours.
+    for (let t = start; t < start + 9 * 86400000; t += 60000) {
+      const parts = Object.fromEntries(formatter.formatToParts(t).map(x => [x.type, x.value]));
+      const day = new Date(`${parts.year}-${parts.month}-${parts.day}T12:00:00Z`).getUTCDay();
+      const wall = `${parts.hour}:${parts.minute}`;
+      const previousWall = `${previousParts.hour}:${previousParts.minute}`;
+      const sameDay = parts.day === previousParts.day && parts.month === previousParts.month;
+      const crossesSkippedTime = sameDay && previousWall < schedule.timeLocal && wall > schedule.timeLocal;
+      if ((wall === schedule.timeLocal || crossesSkippedTime) && weekdays.includes(day)) return new Date(t);
+      previousParts = parts;
     }
+    return null;
+  };
+  const updateSchedulePreview = () => {
+    const el = document.getElementById('dpr-wf-schedule-preview');
+    if (!el) return;
+    try {
+      const schedule = readScheduleForm();
+      const cron = buildCronFromSchedule({ ...schedule, utcOffsetMinutes: 0 });
+      new Intl.DateTimeFormat('en-US', { timeZone: schedule.timezone });
+      const next = nextScheduledRun(schedule);
+      el.textContent = `${describeScheduleLocal(schedule, Number(document.getElementById('dpr-wf-schedule-jitter').value))} · ${schedule.timezone}；预计下次触发：${next ? new Intl.DateTimeFormat('zh-CN', {timeZone: schedule.timezone, dateStyle:'medium', timeStyle:'short'}).format(next) : '暂不可计算'}。GitHub 排队可能延迟。`;
+      el.style.color = '#566270';
+      return { cron, schedule };
+    } catch (e) { el.textContent = e.message; el.style.color = '#a13d37'; }
   };
 
   const initScheduleCard = async () => {
-    if (isLocalDebugPage()) {
-      const loading = document.getElementById('dpr-wf-schedule-loading');
-      if (loading) loading.textContent = '本地调试模式不使用 GitHub 定时调度。';
-      return;
-    }
     const loading = document.getElementById('dpr-wf-schedule-loading');
     try {
       const token = loadGithubToken();
-      const { owner, repo } = await resolveRepoFromUrl(token);
-      if (!owner || !repo) {
-        if (loading) loading.textContent = '无法推断目标仓库，无法读取执行计划。';
-        return;
-      }
+      const { owner, repo, defaultBranch } = await resolveRepoContext(token);
+      if (!owner || !repo) throw new Error('无法确认目标仓库；请在 GitHub Pages 打开，或解锁 GitHub 配置。');
       const file = await fetchWorkflowFileContent(token, owner, repo);
-      scheduleFileCache = { sha: file.sha, content: file.content, owner, repo };
-      const cronMatch = file.content.match(/^\s*- cron:\s*"([^"]+)"/m);
-      const jitterMatch = file.content.match(JITTER_ANCHOR_RE);
-      if (!cronMatch) {
-        if (loading) loading.textContent = '未在 workflow 中找到 schedule cron，无法可视化配置。';
-        return;
-      }
-      const schedule = parseCronToSchedule(cronMatch[1], currentUtcOffsetMinutes());
-      const jitterMinutes = jitterMatch
-        ? Math.round(Number(jitterMatch[2]) / 60)
-        : null;
-      if (loading) loading.style.display = 'none';
+      scheduleFileCache = { ...file, owner, repo, defaultBranch };
+      const parsed = window.jsyaml.load(file.content);
+      const plans = parsed?.on?.schedule;
+      if (!Array.isArray(plans) || plans.length !== 1) throw new Error('当前计划含多条或未知 cron，请在 GitHub 编辑。');
+      const plan = plans[0];
+      const zone = plan.timezone || 'Asia/Shanghai';
+      const schedule = parseCronToSchedule(plan.cron, plan.timezone ? 0 : 480);
+      if (!schedule || schedule.unparsedDayField || schedule.weekdays.length === 0) throw new Error('当前 cron 超出可视化编辑范围，请在 GitHub 编辑。');
+      const jitter = file.content.match(JITTER_ANCHOR_RE);
+      document.getElementById('dpr-wf-schedule-time').value = schedule.timeLocal;
+      document.getElementById('dpr-wf-schedule-mode').value = schedule.dayMode;
+      document.getElementById('dpr-wf-schedule-zone').value = zone;
+      document.getElementById('dpr-wf-schedule-jitter').value = jitter ? String(Math.ceil(Number(jitter[2]) / 60)) : '0';
+      const days = document.getElementById('dpr-wf-schedule-days');
+      days.innerHTML = ['日','一','二','三','四','五','六'].map((label, value) => `<label><input type="checkbox" value="${value}" ${schedule.weekdays.includes(value) ? 'checked' : ''}>${label}</label>`).join('');
+      const sync = () => { days.style.display = document.getElementById('dpr-wf-schedule-mode').value === 'custom' ? 'flex' : 'none'; updateSchedulePreview(); };
       const form = document.getElementById('dpr-wf-schedule-form');
-      if (form) form.style.display = 'block';
-      const timeInput = document.getElementById('dpr-wf-schedule-time');
-      const modeSelect = document.getElementById('dpr-wf-schedule-mode');
-      const daysWrap = document.getElementById('dpr-wf-schedule-days');
-      const jitterInput = document.getElementById('dpr-wf-schedule-jitter');
-      if (!timeInput || !modeSelect || !daysWrap || !jitterInput) return;
-      if (schedule) {
-        timeInput.value = schedule.timeLocal;
-        modeSelect.value = schedule.dayMode || 'daily';
-        if (schedule.weekdays && schedule.weekdays.length) {
-          schedule.weekdays.forEach((d) => {
-            const cb = daysWrap.querySelector(`input[value="${d}"]`);
-            if (cb) cb.checked = true;
-          });
-        }
-      }
-      if (jitterMinutes !== null && Number.isFinite(jitterMinutes)) {
-        jitterInput.value = String(Math.min(55, Math.max(0, jitterMinutes)));
-      } else {
-        jitterInput.value = '5';
-      }
-      if (!daysWrap.childElementCount) {
-        const labels = ['一', '二', '三', '四', '五', '六', '日'];
-        daysWrap.innerHTML = labels
-          .map((label, idx) => {
-            const value = idx === 6 ? 0 : idx + 1;
-            return `<label style="display:inline-flex; align-items:center; gap:2px;"><input type="checkbox" value="${value}">${label}</label>`;
-          })
-          .join('');
-      }
-      const syncDaysVisibility = () => {
-        daysWrap.style.display = modeSelect.value === 'custom' ? 'inline-flex' : 'none';
-      };
-      if (!modeSelect.dataset.bound) {
-        modeSelect.dataset.bound = '1';
-        modeSelect.addEventListener('change', () => {
-          syncDaysVisibility();
-          updateSchedulePreview();
-        });
-        daysWrap.addEventListener('change', updateSchedulePreview);
-        timeInput.addEventListener('input', updateSchedulePreview);
-        jitterInput.addEventListener('input', updateSchedulePreview);
-        const saveBtn = document.getElementById('dpr-wf-schedule-save');
-        if (saveBtn) saveBtn.addEventListener('click', saveScheduleCard);
-      }
-      syncDaysVisibility();
-      updateSchedulePreview();
-      const statusEl = document.getElementById('dpr-wf-schedule-status');
-      if (statusEl) {
-        statusEl.textContent = schedule
-          ? `当前计划：${describeScheduleLocal(schedule, jitterMinutes)}`
-          : `当前 cron：${cronMatch[1]}（UTC），无法解析为本地时间预览`;
-        statusEl.style.color = '#666';
-      }
-    } catch (e) {
-      console.error(e);
-      if (loading) loading.textContent = `读取执行计划失败：${e.message || e}`;
-    }
+      form.onchange = sync;
+      document.getElementById('dpr-wf-schedule-save').onclick = saveScheduleCard;
+      loading.style.display = 'none';
+      form.style.display = 'block';
+      const workflow = await ghFetch(token, `https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily-paper-reader.yml`);
+      if (!workflow.ok) throw new Error(`计划已读取，但无法核验启用状态：HTTP ${workflow.status}`);
+      const info = await workflow.json();
+      document.getElementById('dpr-wf-schedule-status').textContent = info.state === 'active' ? `计划来自默认分支 ${defaultBranch} · 工作流已启用。周一至周五不包含法定节假日调休判断。` : `工作流状态：${info.state}，请到 GitHub Actions 启用。`;
+      sync();
+      const summary = document.getElementById('dpr-daily-schedule-summary');
+      if (summary) summary.textContent = `${describeScheduleLocal(schedule, jitter ? Math.ceil(Number(jitter[2])/60) : 0)} · ${zone}`;
+    } catch (e) { loading.style.display = ''; loading.textContent = `执行计划暂不可读取：${e.message}`; }
   };
 
   const saveScheduleCard = async () => {
-    const statusEl = document.getElementById('dpr-wf-schedule-status');
-    const setStatus = (text, color) => {
-      if (statusEl) {
-        statusEl.textContent = text;
-        statusEl.style.color = color || '#666';
-      }
-    };
+    const status = document.getElementById('dpr-wf-schedule-status');
+    const button = document.getElementById('dpr-wf-schedule-save');
     const token = loadGithubToken();
-    if (!token) {
-      setStatus('保存需要 GitHub Token（repo + workflow 权限），请先完成密钥解锁。', '#c00');
-      return;
-    }
-    if (!scheduleFileCache || !scheduleFileCache.sha) {
-      setStatus('尚未读取到当前 workflow 文件，请关闭面板后重试。', '#c00');
-      return;
-    }
-    const saveBtn = document.getElementById('dpr-wf-schedule-save');
+    if (!token) { status.textContent = '保存需要 GitHub Token 的 Contents / Workflows 写入权限，请先解锁。'; return; }
+    if (!scheduleFileCache) { status.textContent = '请先读取当前计划。'; return; }
+    button.disabled = true;
     try {
-      if (saveBtn) saveBtn.disabled = true;
-      setStatus('正在生成并校验新的 cron...', '#666');
-      const cron = buildCronFromSchedule({
-        timeLocal: document.getElementById('dpr-wf-schedule-time').value,
-        dayMode: document.getElementById('dpr-wf-schedule-mode').value,
-        weekdays: Array.from(
-          document.querySelectorAll('#dpr-wf-schedule-days input[type="checkbox"]:checked'),
-        ).map((el) => Number(el.value)),
-        utcOffsetMinutes: currentUtcOffsetMinutes(),
-      });
+      const preview = updateSchedulePreview();
+      if (!preview) throw new Error('请修正计划输入');
       const jitterMinutes = Number(document.getElementById('dpr-wf-schedule-jitter').value);
-      const nextContent = applyScheduleToWorkflowYaml(scheduleFileCache.content, {
-        cron,
-        jitterMinutes,
-      });
-      setStatus('正在保存到仓库...', '#666');
-      const message = `chore: 更新每日流水线执行计划 (cron: ${cron})\n\n${SCHEDULE_COMMIT_CO_AUTHOR}`;
-      const result = await putWorkflowFileContent(
-        token, scheduleFileCache.owner, scheduleFileCache.repo, scheduleFileCache.sha, nextContent, message,
-      );
-      // 读回验证：确认提交内容里包含新 cron
-      const verify = await fetchWorkflowFileContent(
-        token, scheduleFileCache.owner, scheduleFileCache.repo,
-      );
-      const verifyCron = String(verify.content || '').match(/^\s*- cron:\s*"([^"]+)"/m);
-      if (!verifyCron || verifyCron[1] !== cron) {
-        throw new Error('保存后读回校验失败：新 cron 未出现在仓库文件中，请前往 Actions 页面确认。');
-      }
-      scheduleFileCache = { sha: (result && result.content && result.content.sha) || verify.sha, content: verify.content, owner: scheduleFileCache.owner, repo: scheduleFileCache.repo };
-      const schedule = parseCronToSchedule(cron, currentUtcOffsetMinutes());
-      setStatus(
-        schedule
-          ? `✅ 已保存：${describeScheduleLocal(schedule, jitterMinutes)}。GitHub 定时触发可能有数分钟延迟。`
-          : `✅ 已保存 cron：${cron}（UTC）。GitHub 定时触发可能有数分钟延迟。`,
-        '#28a745',
-      );
-      updateSchedulePreview();
-    } catch (e) {
-      console.error(e);
-      setStatus(`❌ ${e.message || e}`, '#c00');
-    } finally {
-      if (saveBtn) saveBtn.disabled = false;
-    }
+      const content = applyScheduleToWorkflowYaml(scheduleFileCache.content, { cron: preview.cron, timezone: preview.schedule.timezone, jitterMinutes });
+      status.textContent = '正在保存到默认分支…';
+      await putWorkflowFileContent(token, scheduleFileCache.owner, scheduleFileCache.repo, scheduleFileCache.sha, content,
+        `chore: 更新每日执行计划\n\n${SCHEDULE_COMMIT_CO_AUTHOR}`);
+      const verify = await fetchWorkflowFileContent(token, scheduleFileCache.owner, scheduleFileCache.repo);
+      if (verify.content !== content) throw new Error('读回内容与保存内容不一致，请刷新后核对；未报告保存成功。');
+      scheduleFileCache = { ...scheduleFileCache, ...verify };
+      status.textContent = '已保存并读回核验；从下次定时触发生效。GitHub 排队可能延迟。';
+    } catch (e) { status.textContent = `未确认保存成功：${e.message}。409 表示文件已更新，请重新打开；403 请检查工作流写入权限。`; }
+    finally { button.disabled = false; }
   };
 
   const close = () => {
@@ -1059,12 +1026,15 @@ window.DPRWorkflowRunner = (function () {
           .forEach((n) => n.classList.remove('is-active'));
         btn.classList.add('is-active');
         selectedRun = { owner, repo, runId, token: loadGithubToken() };
+        rememberRun({ owner, repo, runId });
         setStatus(`正在加载运行详情：run_id=${runId}`, '#666', { waiting: true });
         await refreshRun(owner, repo, runId);
-        refreshTimer = setInterval(() => {
-          if (!selectedRun) return;
-          refreshRun(selectedRun.owner, selectedRun.repo, selectedRun.runId);
-        }, POLL_INTERVAL_MS());
+        if (!lastRunStateById[String(runId)]?.startsWith('completed/')) {
+          refreshTimer = setInterval(() => {
+            if (!selectedRun) return;
+            refreshRun(selectedRun.owner, selectedRun.repo, selectedRun.runId);
+          }, POLL_INTERVAL_MS());
+        }
       });
     });
   };
@@ -1073,12 +1043,6 @@ window.DPRWorkflowRunner = (function () {
     ensureOverlay();
     if (!recentEl) return;
     const token = loadGithubToken();
-    if (!token && !/\.github\.io\//.test(window.location.href || '')) {
-      recentEl.classList.remove('is-loading');
-      recentEl.innerHTML =
-        '<div style="color:#c00;">未检测到 GitHub Token，且当前不在 GitHub Pages 域名下，无法推断目标仓库。请先完成密钥配置。</div>';
-      return;
-    }
 
     try {
       const repoContext = await resolveRepoContext(token);
@@ -1106,6 +1070,7 @@ window.DPRWorkflowRunner = (function () {
           wfId,
         )}/runs?per_page=12`;
         const res = await ghFetch(token, url);
+        if (res.status === 404) { runsByWorkflowId[wfId] = []; continue; }
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           throw new Error(
@@ -1279,6 +1244,9 @@ window.DPRWorkflowRunner = (function () {
       }
 
       setStatus('已触发，正在等待运行记录创建...', '#666', { waiting: true });
+      rememberRun({ owner, repo, workflow: workflowFile, createdAt: createdAt.toISOString(), pending: true });
+      const chip = document.getElementById('dpr-home-status-chip');
+      if (chip) chip.textContent = `${wf.name}：已提交，正在等待 GitHub 创建运行记录。`;
 
       // 派发确认与进度轮询分离，关闭页面不会把已提交的任务误报为提交失败。
       const monitor = async () => {
@@ -1322,6 +1290,7 @@ window.DPRWorkflowRunner = (function () {
         }
 
         activeRun = { owner, repo, runId: run.id, token };
+        rememberRun({ owner, repo, runId: run.id, workflow: workflowFile });
         selectedRun = activeRun;
         setStatus(`运行已创建：run_id=${run.id}，开始拉取进度...`, '#080', { waiting: true });
         await refreshRun(owner, repo, run.id);
@@ -1340,7 +1309,7 @@ window.DPRWorkflowRunner = (function () {
         runsEl.innerHTML = `<div style="color:#666;">任务无需重复提交，请在 <a target="_blank" href="https://github.com/${owner}/${repo}/actions">GitHub Actions</a> 查看进度。</div>`;
       });
       // 其它入口保留原有等待运行记录的时序；重置按钮只等待派发确认。
-      if (wf.key !== 'reset-content') await monitoring;
+      // Dispatch success is independent of the asynchronous run lookup, for every entry point.
       return true;
     } catch (e) {
       console.error(e);
@@ -1388,6 +1357,35 @@ window.DPRWorkflowRunner = (function () {
     }
   };
 
+  const STEP_LABELS = {
+    'Random delay to spread scheduled runs': '计划随机等待', 'Checkout': '读取仓库',
+    'Setup Python': '准备运行环境', 'Initialize pipeline context': '固定本次运行参数',
+    'Prepare research queries': '准备研究查询', 'Fetch papers': '抓取论文',
+    'Recall keywords': '关键词召回', 'Recall semantic matches': '语义召回',
+    'Fuse candidates': '融合候选', 'Rerank candidates': '候选重排',
+    'Score relevance with LLM': '模型相关性评分', 'Select papers': '选择论文',
+    'Generate reading content and reports': '生成阅读页、调研与精读报告',
+    'Run topic research': '运行专题研究', 'Commit results': '提交并推送产物',
+    'Verify existing Pages publication': '核验网站发布', 'Generate selected deep reports': '补生成所选精读报告',
+  };
+  const elapsedText = (start, end, now = Date.now()) => {
+    if (!start || !Number.isFinite(Date.parse(start))) return '';
+    const seconds = Math.max(0, Math.floor(((end ? Date.parse(end) : now) - Date.parse(start)) / 1000));
+    return seconds < 60 ? `${seconds} 秒` : `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒`;
+  };
+  const summarizeRunSteps = (run, jobs) => {
+    const steps = (jobs || []).flatMap(job => (job.steps || []).map(step => ({ ...step,
+      completed_at: step.completed_at || (run.status === 'completed' ? job.completed_at || run.updated_at : null) })));
+    const failed = steps.find(step => ['failure', 'timed_out'].includes(step.conclusion));
+    const active = steps.find(step => step.status === 'in_progress');
+    const step = failed || active;
+    const publish = steps.find(step => step.name === 'Verify existing Pages publication');
+    const committed = steps.some(step => ['Commit results', 'Publish selected reports'].includes(step.name) && step.conclusion === 'success');
+    const label = step ? (STEP_LABELS[step.name] || step.name) : '';
+    const duration = step ? elapsedText(step.started_at, step.completed_at) : '';
+    let publication = publish?.conclusion === 'success' ? '网站已核验更新' : committed ? '产物已提交，网站更新待核验' : '尚未确认发布新产物';
+    return { label, duration, publication, failed: !!failed, startedAt: step?.started_at || '' };
+  };
   const renderRun = (owner, repo, run, jobs, pipelineStage) => {
     const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${run.id}`;
     const status = run.status || '';
@@ -1402,7 +1400,8 @@ window.DPRWorkflowRunner = (function () {
             ? '#1565c0'
             : '#666';
     const badgeText = formatRunBadgeText(status, conclusion);
-    const stageDescription = describePipelineStage(pipelineStage);
+    const summary = summarizeRunSteps(run, jobs);
+    const stageDescription = [summary.failed ? '失败于' : '', summary.label, summary.duration].filter(Boolean).join(' · ') || describePipelineStage(pipelineStage);
     const stageHtml = stageDescription
       ? `<div class="dpr-wf-pipeline-stage" style="display:flex; align-items:center; gap:6px; margin-bottom:8px; padding:6px 10px; border-radius:6px; background:rgba(21,101,192,0.08); color:#1565c0; font-size:12px;">
           <span>📍</span><span>流水线当前阶段：<strong>${escapeHtml(stageDescription)}</strong></span>
@@ -1427,8 +1426,8 @@ window.DPRWorkflowRunner = (function () {
                       ? '⏳'
                       : '•';
             return `<div class="dpr-wf-step">${icon} ${escapeHtml(
-              s.name || '',
-            )}</div>`;
+              STEP_LABELS[s.name] || s.name || '',
+            )} <span class="dpr-step-duration">${escapeHtml(elapsedText(s.started_at, s.completed_at))}</span></div>`;
           })
           .join('');
         const jobId = j.id ? String(j.id) : '';
@@ -1462,6 +1461,7 @@ window.DPRWorkflowRunner = (function () {
         </div>
       </div>
       ${stageHtml}
+      <p class="dpr-run-publication">${escapeHtml(summary.publication)} · 状态查询于 ${escapeHtml(new Date().toLocaleTimeString())}</p>
       ${jobHtml || '<div style="color:#999;">暂无 Job 信息</div>'}
     `;
   };
@@ -1487,11 +1487,9 @@ window.DPRWorkflowRunner = (function () {
       if (jobsRes.ok) {
         const jobsData = await jobsRes.json();
         jobs = Array.isArray(jobsData.jobs) ? jobsData.jobs : [];
-      }
+      } else throw new Error(`读取阶段失败：HTTP ${jobsRes.status}`);
 
-      const pipelineStage = await fetchPipelineStage(
-        owner, repo, token, jobs, run.status, run.conclusion, runId,
-      );
+      const pipelineStage = null; // Native Actions steps are authoritative; logs are diagnostic only.
 
       renderRun(owner, repo, run, jobs, pipelineStage);
 
@@ -1511,7 +1509,7 @@ window.DPRWorkflowRunner = (function () {
       }
     } catch (e) {
       console.error(e);
-      setStatus(`刷新失败：${e.message || e}`, '#c00');
+      setStatus(`状态暂不可确认：${e.message || e}；任务可能仍在运行，无需重复提交。`, '#8a6325');
     }
   };
 
@@ -1522,7 +1520,7 @@ window.DPRWorkflowRunner = (function () {
       return false;
     }
     open();
-    if ((workflowKey === 'starter-pack' || workflowKey === 'topic-research') && isLocalDebugPage()) {
+    if ((workflowKey === 'starter-pack' || workflowKey === 'topic-research' || workflowKey === 'deep-reading-report') && isLocalDebugPage()) {
       setStatus('入门包仅通过 GitHub Actions 执行，请在你的 GitHub Pages 站点操作；不会在本地执行。', '#c00');
       return false;
     }
@@ -1725,112 +1723,70 @@ window.DPRWorkflowRunner = (function () {
     runConferenceRetrieval(conference, years);
 
   let dailyRunSummaryCache = null;
-  // 首页状态条用的“最近一次日常流水线”摘要；匿名可读，缓存 60 秒。
+  let dailySummaryPending = null;
+  let dailySummaryError = '';
+  let homeRefreshTimer = null;
+  const STATUS_TEXT_MAP = { queued:'排队中', in_progress:'运行中', waiting:'等待中', requested:'等待创建',
+    pending:'等待中', success:'成功', failure:'失败', cancelled:'已取消', timed_out:'已超时', skipped:'已跳过' };
   const getLatestDailyRunSummary = async (forceRefresh = false) => {
-    if (
-      !forceRefresh &&
-      dailyRunSummaryCache &&
-      Date.now() - dailyRunSummaryCache.fetchedAt < 60000
-    ) {
-      return dailyRunSummaryCache.value;
-    }
-    try {
-      const token = loadGithubToken();
-      const { owner, repo } = await resolveRepoFromUrl(token);
-      if (!owner || !repo) return null;
-      const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily-paper-reader.yml/runs?per_page=1`;
-      const res = await ghFetch(token, url);
-      if (!res.ok) return null;
-      const data = await res.json().catch(() => null);
-      const run = data && Array.isArray(data.workflow_runs) ? data.workflow_runs[0] : null;
-      if (!run) return null;
-      const value = {
-        runNumber: run.run_number || run.id,
-        status: run.status || '',
-        conclusion: run.conclusion || '',
-        createdAt: run.created_at || '',
-        url: `https://github.com/${owner}/${repo}/actions/runs/${run.id}`,
-      };
-      dailyRunSummaryCache = { fetchedAt: Date.now(), value };
-      return value;
-    } catch {
-      return null;
-    }
+    if (dailySummaryPending) return dailySummaryPending;
+    const interval = loadGithubToken() ? 15000 : 300000;
+    if (!forceRefresh && dailyRunSummaryCache && Date.now() - dailyRunSummaryCache.fetchedAt < interval) return dailyRunSummaryCache.value;
+    dailySummaryPending = (async () => {
+      try {
+        const token = loadGithubToken();
+        const { owner, repo } = await resolveRepoFromUrl(token);
+        if (!owner || !repo) throw new Error('无法确认站点仓库');
+        const response = await ghFetch(token, `https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily-paper-reader.yml/runs?per_page=5`);
+        if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
+        const data = await response.json();
+        const runs = data.workflow_runs || [];
+        const run = runs.find(item => item.status !== 'completed') || runs[0];
+        if (!run) return { empty: true };
+        const jobsResponse = await ghFetch(token, `https://api.github.com/repos/${owner}/${repo}/actions/runs/${run.id}/jobs?per_page=100`);
+        if (!jobsResponse.ok) throw new Error(`阶段查询 HTTP ${jobsResponse.status}`);
+        const jobs = (await jobsResponse.json()).jobs || [];
+        const value = { runId: run.id, runNumber: run.run_number || run.id, owner, repo,
+          status: run.status, conclusion: run.conclusion, createdAt: run.created_at,
+          url:`https://github.com/${owner}/${repo}/actions/runs/${run.id}`, ...summarizeRunSteps(run, jobs) };
+        dailyRunSummaryCache = { fetchedAt: Date.now(), value };
+        dailySummaryError = '';
+        return value;
+      } catch (error) { dailySummaryError = error.message; return null; }
+      finally { dailySummaryPending = null; }
+    })();
+    return dailySummaryPending;
   };
-
-  const STATUS_TEXT_MAP = {
-    queued: '排队中',
-    in_progress: '运行中',
-    waiting: '等待中',
-    success: '成功',
-    failure: '失败',
-    cancelled: '已取消',
-  };
-
-  const describeDailyRunStatus = (summary) => {
-    if (!summary) return '';
-    if (summary.status === 'completed') {
-      return STATUS_TEXT_MAP[summary.conclusion] || summary.conclusion || '已完成';
-    }
-    return STATUS_TEXT_MAP[summary.status] || summary.status || '';
-  };
-
-  const statusColorFor = (summary) => {
-    if (!summary) return '#666';
-    if (summary.status === 'completed') {
-      return summary.conclusion === 'success' ? '#2e7d32' : '#c00';
-    }
-    return '#1565c0';
-  };
-
-  // 首页流水线状态条：挂载到公告卡片内 #dpr-home-status-chip 占位节点。
   const mountHomeStatusChip = async () => {
     const mount = document.getElementById('dpr-home-status-chip');
-    if (!mount || mount.dataset.loaded === '1') return;
-    mount.dataset.loaded = '1';
-    mount.innerHTML = '<span style="color:#999;">正在读取流水线状态...</span>';
-    const summary = await getLatestDailyRunSummary(true);
+    if (!mount || mount.dataset.loading === '1') return;
+    clearTimeout(homeRefreshTimer);
+    mount.dataset.loading = '1';
+    if (!mount.textContent) mount.textContent = '正在查询当前工作流状态…';
+    const summary = await getLatestDailyRunSummary();
+    mount.dataset.loading = '0';
     if (!mount.isConnected) return;
     if (!summary) {
-      const hasToken = !!loadGithubToken();
-      mount.innerHTML =
-        `<span style="color:#999;">流水线状态暂时读取不到（匿名接口限流 60 次/小时）。` +
-        `<button type="button" id="dpr-home-status-retry" class="arxiv-tool-btn" style="padding:1px 8px; font-size:12px; margin:0 4px;">重试</button>` +
-        `${hasToken ? '' : '解锁密钥后可实时读取。'}60 秒后也会自动重试。</span>`;
-      mount.dataset.loaded = '0';
-      const retryBtn = document.getElementById('dpr-home-status-retry');
-      if (retryBtn) {
-        retryBtn.addEventListener('click', () => {
-          mountHomeStatusChip();
-        });
-      }
-      clearTimeout(mountHomeStatusChip._retryTimer);
-      mountHomeStatusChip._retryTimer = setTimeout(() => {
-        if (mount.isConnected) mountHomeStatusChip();
-      }, 60000);
-      return;
+      const previous = dailyRunSummaryCache?.value;
+      mount.innerHTML = `<div class="dpr-home-run-heading">工作流状态暂不可确认</div><p>${previous ? `上次查询：#${escapeHtml(String(previous.runNumber))} · ${escapeHtml(STATUS_TEXT_MAP[previous.conclusion || previous.status] || previous.status)}。` : ''}${escapeHtml(dailySummaryError)}。任务可能仍在运行；无需重复提交。</p><button type="button" data-role="run-retry">重新查询</button>`;
+      mount.querySelector('[data-role="run-retry"]').onclick = () => { dailyRunSummaryCache = null; mountHomeStatusChip(); };
+    } else if (summary.empty) {
+      mount.innerHTML = '<div class="dpr-home-run-heading">尚无日常工作流记录</div><p>可在日常管理中查看执行计划或手动运行。</p>';
+    } else {
+      const status = STATUS_TEXT_MAP[summary.conclusion || summary.status] || summary.status;
+      mount.innerHTML = `<div class="dpr-home-run-top"><div><span class="dpr-run-eyebrow">日常推荐 · #${escapeHtml(String(summary.runNumber))}</span><div class="dpr-home-run-heading">${escapeHtml(status)}${summary.label ? ' · ' + escapeHtml(summary.label) : ''}</div></div><button type="button" data-role="run-details">查看执行过程</button></div><p>${escapeHtml(summary.duration ? '当前阶段耗时 ' + summary.duration + ' · ' : '')}${escapeHtml(summary.publication)}</p><div class="dpr-run-footer">查询于 ${escapeHtml(new Date(dailyRunSummaryCache.fetchedAt).toLocaleTimeString())} · ${loadGithubToken() ? '约 15 秒刷新' : '游客约 5 分钟刷新，解锁后可更频繁更新'} <a href="${escapeHtml(summary.url)}" target="_blank" rel="noopener">GitHub Actions ↗</a></div>`;
+      mount.querySelector('[data-role="run-details"]').onclick = () => {
+        rememberRun({ owner: summary.owner, repo: summary.repo, runId: summary.runId });
+        selectedRun = null;
+        open();
+      };
     }
-    const color = statusColorFor(summary);
-    const statusText = describeDailyRunStatus(summary);
-    mount.innerHTML =
-      `<a href="${escapeHtml(summary.url)}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-size:12px; color:inherit;">` +
-      `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${color};${summary.status !== 'completed' ? ' animation:dpr-home-chip-pulse 1.6s ease-in-out infinite;' : ''}"></span>` +
-      `<span>每日流水线 #${escapeHtml(String(summary.runNumber))} · <strong style="color:${color};">${escapeHtml(statusText)}</strong></span>` +
-      `<span style="color:#999;">${escapeHtml(formatRunTime(summary.createdAt))}</span>` +
-      `</a>`;
-    if (summary.status === 'in_progress' || summary.status === 'queued') {
-      // 运行中时 60 秒后自动刷新一次状态条
-      setTimeout(() => {
-        if (mount.isConnected) {
-          mount.dataset.loaded = '0';
-          mountHomeStatusChip();
-        }
-      }, 60000);
-    }
+    homeRefreshTimer = setTimeout(() => { if (mount.isConnected) mountHomeStatusChip(); }, loadGithubToken() ? 15000 : 300000);
   };
 
   return {
     __test: {
+      dispatchAndMonitor,
       buildQuickFetchRequest,
       buildStarterPackRequest,
       buildTopicResearchRequest,
@@ -1840,6 +1796,8 @@ window.DPRWorkflowRunner = (function () {
       buildCronFromSchedule,
       parseCronToSchedule,
       applyScheduleToWorkflowYaml,
+      nextScheduledRun,
+      summarizeRunSteps,
     },
     buildTopicResearchRequest,
     sanitizeResearchProfile,

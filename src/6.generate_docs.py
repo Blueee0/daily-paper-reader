@@ -386,6 +386,7 @@ def strip_auto_sections(md_text: str) -> str:
     if not md_text:
         return ""
     markers = [
+        '\n\n---\n\n<!-- DPR-DEEP-REPORT:BEGIN -->',
         "\n\n---\n\n## 论文详细总结（自动生成）",
         "\n\n---\n\n## 速览摘要（自动生成）",
     ]
@@ -501,6 +502,13 @@ def upsert_auto_block(md_path: str, heading: str, content: str) -> None:
     - 若已存在同名 heading，则替换从该块开始到文件末尾
     - 否则追加到文件末尾
     """
+    if heading == '论文详细总结（自动生成）':
+        from deep_reading import insert_report
+        with open(md_path, encoding='utf-8') as handle:
+            text = handle.read()
+        with open(md_path, 'w', encoding='utf-8') as handle:
+            handle.write(insert_report(text, content))
+        return
     key = f"## {heading}"
     block = f"\n\n---\n\n{key}\n\n{content}".rstrip() + "\n"
 
@@ -552,72 +560,16 @@ def generate_deep_summary(
 ) -> str | None:
     active_client = client or LLM_CLIENT
     if active_client is None:
-        log("[WARN] 未配置 LLM_API_KEY（或 SUMMARY_API_KEY / DEEPSEEK_API_KEY），跳过精读总结。")
-        return None
+        raise RuntimeError('未配置工作流 LLM，无法生成精读报告')
     if not os.path.exists(md_file_path):
         return None
-
-    with open(md_file_path, "r", encoding="utf-8") as f:
-        paper_md_content = strip_auto_sections(f.read())
-
-    paper_txt_content = ""
-    if os.path.exists(txt_file_path):
-        with open(txt_file_path, "r", encoding="utf-8") as f:
-            paper_txt_content = f.read()
-
-    system_prompt = (
-        "你是一名资深学术论文分析助手，请使用中文、以 Markdown 形式，"
-        "对给定论文做结构化、深入、客观的总结。"
-    )
-    user_prompt = (
-        "请基于下面提供的论文内容，生成一段详细的中文总结，要求按照如下要点依次展开：\n"
-        "1. 论文的核心问题与整体含义（研究动机和背景）。\n"
-        "2. 论文提出的方法论：核心思想、关键技术细节、公式或算法流程（用文字说明即可）。\n"
-        "3. 实验设计：使用了哪些数据集 / 场景，它的 benchmark 是什么，对比了哪些方法。\n"
-        "4. 资源与算力：如果文中有提到，请总结使用了多少算力（GPU 型号、数量、训练时长等）。若未明确说明，也请指出这一点。\n"
-        "5. 实验数量与充分性：大概做了多少组实验（如不同数据集、消融实验等），这些实验是否充分、是否客观、公平。\n"
-        "6. 论文的主要结论与发现。\n"
-        "7. 优点：方法或实验设计上有哪些亮点。\n"
-        "8. 不足与局限：包括实验覆盖、偏差风险、应用限制等。\n\n"
-        "请用分层标题和项目符号（Markdown 格式）组织上述内容，语言尽量简洁但信息要尽量完整。\n"
-        "要求：最后单独输出一行“（完）”作为结束标记。"
-    )
-
-    messages = [{"role": "system", "content": system_prompt}]
-    if paper_txt_content:
-        messages.append({"role": "user", "content": f"### 论文 PDF 提取文本 ###\n{paper_txt_content}"})
-    messages.append({"role": "user", "content": f"### 论文 Markdown 元数据 ###\n{paper_md_content}"})
-    messages.append({"role": "user", "content": user_prompt})
-
-    last = ""
-    for attempt in range(1, max_retries + 1):
-        try:
-            summary = call_llm_text(active_client, messages, temperature=0.3, max_tokens=4096)
-            summary = (summary or "").strip()
-            if not summary:
-                continue
-            last = summary
-            if os.getenv("DPR_DEBUG_STEP6") == "1":
-                log(f"[DEBUG][STEP6] deep_summary attempt={attempt} len={len(summary)} tail={summary[-20:]!r}")
-            if "（完）" in summary:
-                return summary
-            # 续写一次：避免输出被截断
-            cont_messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "你上一次的总结可能被截断了，请从中断处继续补全，不要重复已输出内容。"},
-                {"role": "user", "content": f"上一次输出如下：\n\n{summary}\n\n请继续补全，最后以一行“（完）”结束。"},
-            ]
-            cont = call_llm_text(active_client, cont_messages, temperature=0.3, max_tokens=2048)
-            cont = (cont or "").strip()
-            merged = f"{summary}\n\n{cont}".strip()
-            if os.getenv("DPR_DEBUG_STEP6") == "1":
-                log(f"[DEBUG][STEP6] deep_summary_cont attempt={attempt} len={len(cont)} merged_tail={merged[-20:]!r}")
-            if "（完）" in merged:
-                return merged
-        except Exception as e:
-            log(f"[WARN] 精读总结失败（第 {attempt} 次）：{e}")
-            time.sleep(2 * attempt)
-    return last or None
+    if not os.path.exists(txt_file_path):
+        raise RuntimeError('缺少论文全文，无法生成精读报告')
+    with open(txt_file_path, encoding='utf-8') as handle:
+        if not is_usable_paper_text(handle.read()):
+            raise RuntimeError('全文不可用，无法生成精读报告')
+    from deep_reading import generate_report
+    return generate_report(md_file_path, txt_file_path, active_client, max_attempts=min(max_retries, 2))
 
 
 def generate_glance_overview(
@@ -1636,6 +1588,11 @@ def build_markdown_content(
     # 构建 YAML front matter
     lines = ["---"]
     lines.append(f"title: {yaml_escape_value(title)}")
+    lines.append(f"reading_section: {yaml_escape_value(section)}")
+    if paper.get('id') or paper.get('paper_id'):
+        lines.append(f"paper_id: {yaml_escape_value(str(paper.get('id') or paper.get('paper_id')))}")
+    if paper.get('doi'):
+        lines.append(f"doi: {yaml_escape_value(str(paper['doi']))}")
     if zh_title:
         lines.append(f"title_zh: {yaml_escape_value(zh_title)}")
     lines.append(f"authors: {yaml_escape_value(', '.join(authors) if authors else 'Unknown')}")
@@ -3084,6 +3041,7 @@ def main() -> None:
         max_workers = max(1, docs_concurrency)
         futures: Dict[Any, Tuple[int, Dict[str, Any]]] = {}
         results: List[Tuple[int, Tuple[str, str, List[Tuple[str, str]]]]] = []
+        failures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for index, paper in enumerate(papers):
                 future = executor.submit(
@@ -3103,11 +3061,14 @@ def main() -> None:
                     pid, title = future.result()
                 except Exception as e:
                     log(f"[WARN] 生成{section}论文失败：{e}")
+                    failures.append(str(e))
                     continue
                 paper_evidence_by_id[str((pid or "").strip())] = get_paper_sidebar_evidence(paper)
                 section_tags = extract_sidebar_tags(paper)
                 results.append((index, (pid, title, section_tags)))
 
+        if failures:
+            raise RuntimeError(f'{section} 内容生成失败 {len(failures)} 篇；未将本轮标记为完成。首个错误：{failures[0]}')
         results.sort(key=lambda item: item[0])
         return [v for _, v in results]
 

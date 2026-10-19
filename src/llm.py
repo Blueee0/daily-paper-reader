@@ -3,6 +3,7 @@ import os
 import re
 import time
 from typing import List, Dict, Tuple, Any, Optional
+from urllib.parse import urlsplit
 
 import requests
 
@@ -124,7 +125,7 @@ class LLMClient:
         # 实例级别的累计耗时（秒）
         self._cum_time_seconds: float = 0.0
         self.kwargs: Dict[str, Any] = {
-            'max_tokens': resolve_max_output_tokens(),
+            'max_tokens': resolve_max_output_tokens(8192),
             'temperature': 0.6,
             'top_p': 0.3,
             'top_k': 50,
@@ -177,9 +178,7 @@ class LLMClient:
         try:
             url = (base_url or self.base_url or '').lower()
             model = str(self.model or '').strip().lower()
-            if 'deepseek' in url:
-                return 'deepseek'
-            if model.startswith('deepseek-'):
+            if (urlsplit(url).hostname or '').lower() in {'api.deepseek.com', 'deepseek.com'}:
                 return 'deepseek'
         except Exception:
             pass
@@ -556,6 +555,11 @@ class LLMClient:
                     payload[k] = v
         if response_format is not None:
             payload['response_format'] = response_format
+        # Reasoning-model Chat Completions dialect; other compatible models keep max_tokens.
+        if re.search(r'(^|/)(?:gpt-5(?:[.-]|$)|o[134](?:[.-]|$))', model_name, re.I):
+            payload['max_completion_tokens'] = payload.pop('max_tokens', 8192)
+            for name in ('temperature', 'top_p', 'frequency_penalty', 'presence_penalty'):
+                payload.pop(name, None)
 
         # 对输出 token 上限做保护；DeepSeek V4 支持更长输出，默认按 384K 预留。
         try:
@@ -681,7 +685,7 @@ class LLMClient:
                 last_error = e
                 if self._is_authentication_error(e):
                     print(
-                        "LLM 鉴权失败：当前 API Key 无效或无权限，请在本地配置中更新 DeepSeek API Key 后重试。"
+                        "LLM 鉴权失败：当前 API Key 无效或无权限，请检查所选平台的模型配置。"
                     )
                     if hasattr(e, "response") and e.response is not None:
                         try:

@@ -70,6 +70,10 @@ def cache_reading_generators(generator, root):
         ("generate_glance_overview", "glance"),
         ("generate_deep_summary", "deep"),
     ]:
+        if kind == 'deep':
+            # Twelve-section reports own their prompt/evidence/version-aware cache and
+            # published sidecars; the old wrapper must not bypass it with stale prose.
+            continue
         setattr(generator, name, wrap(getattr(generator, name), kind))
 
 

@@ -12,7 +12,7 @@ function sandbox() {
       addEventListener: (name, fn) => listeners.set(name, fn),
       removeEventListener: (name) => listeners.delete(name),
     },
-    document: { readyState: 'loading', addEventListener() {} },
+    document: { readyState: 'loading', addEventListener() {}, getElementById() { return null; } },
     console: { warn() {}, error() {}, log() {} },
     URL, AbortController,
     setTimeout(fn, ms) { const id = ++nextTimer; timers.set(id, { fn, ms }); return id; },
@@ -66,7 +66,7 @@ async function testDeepSeekTimeoutAndHttpError() {
   const timer = [...timers.values()].find(t => t.ms === 20000);
   assert.ok(timer);
   timer.fn();
-  await assert.rejects(pending, { message: 'DeepSeek 连接测试超时，请稍后重试' });
+  await assert.rejects(pending, { message: 'LLM 连接测试超时，请检查平台网络与浏览器跨域支持' });
   assert.equal(timers.size, 0);
   context.fetch = async () => response(401);
   await assert.rejects(context.window.probe.pingChatModels(entries, null), /HTTP 401/);
@@ -150,7 +150,7 @@ async function testWorkflowReturnsDispatchResultBeforeMonitoring() {
       return response(200, { default_branch: 'main', fork: true });
     };
     const code = fs.readFileSync('app/workflows.runner.js', 'utf8')
-      .replace(/\n  return \{\n/, '\n  return {\n    dispatchAndMonitor, setUi: (s,r) => {statusEl=s;runsEl=r;},\n');
+      .replace(/\r?\n  return \{\r?\n/, '\n  return {\n    dispatchAndMonitor, setUi: (s,r) => {statusEl=s;runsEl=r;},\n');
     vm.runInContext(code, context);
     const api = context.window.DPRWorkflowRunner;
     const statusEl = { textContent: '', style: {}, classList: { toggle() {} } };

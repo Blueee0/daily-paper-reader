@@ -102,3 +102,22 @@ testParseCronRoundTrip();
 testApplyScheduleToWorkflowYaml();
 
 console.log('workflow schedule tests passed');
+
+const { nextScheduledRun, summarizeRunSteps } = window.DPRWorkflowRunner.__test;
+const native = applyScheduleToWorkflowYaml(
+  require('node:fs').readFileSync(require('node:path').join(__dirname, '../.github/workflows/daily-paper-reader.yml'), 'utf8'),
+  { cron: '30 2 * * 1,2,3,4,5', timezone: 'Asia/Shanghai', jitterMinutes: 0 },
+);
+assert.ok(native.includes('timezone: "Asia/Shanghai"'));
+assert.ok(native.includes('shuf -i 0-0 -n 1'));
+assert.throws(() => applyScheduleToWorkflowYaml(native, { cron:'0 9 * * *', timezone:'Bad/Zone' }));
+assert.equal(nextScheduledRun({ timeLocal:'02:30', timezone:'Asia/Shanghai', dayMode:'workdays' }, new Date('2026-10-16T20:00:00Z')).toISOString(), '2026-10-18T18:30:00.000Z');
+assert.equal(nextScheduledRun({ timeLocal:'09:00', timezone:'America/New_York', dayMode:'daily' }, new Date('2026-11-01T01:00:00Z')).toISOString(), '2026-11-01T14:00:00.000Z');
+assert.equal(parseCronToSchedule('0 9 1 * *', 0), null);
+const failed = summarizeRunSteps({status:'completed',conclusion:'failure'}, [{ steps:[{name:'Score relevance with LLM',status:'completed',conclusion:'failure',started_at:'2026-10-19T00:00:00Z',completed_at:'2026-10-19T00:01:20Z'}] }]);
+assert.equal(failed.failed, true);
+assert.equal(failed.label, '模型相关性评分');
+assert.equal(failed.duration, '1 分 20 秒');
+const committed = summarizeRunSteps({}, [{steps:[{name:'Commit results',conclusion:'success'},{name:'Verify existing Pages publication',status:'queued'}]}]);
+assert.equal(committed.publication, '产物已提交，网站更新待核验');
+console.log('native timezone, DST, run stages and publication tests passed');

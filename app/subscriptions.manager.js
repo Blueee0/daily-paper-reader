@@ -1540,6 +1540,12 @@ window.SubscriptionsManager = (function () {
               </div>
               <button id="arxiv-admin-open-workflow-panel-btn" class="arxiv-tool-btn dpr-task-workflow-btn" type="button">打开工作流</button>
             </div>
+            <div class="dpr-daily-settings-card">
+              <strong>自动执行计划</strong>
+              <p id="dpr-daily-schedule-summary">所有启用的日常方向共用一套计划。打开运行计划可查看实际时间、时区和执行日。</p>
+              <button type="button" id="dpr-daily-schedule-open" class="arxiv-tool-btn">查看 / 配置运行计划</button>
+              <p id="dpr-daily-model-status">模型配置：解锁后可查看当前平台；保存浏览器配置与同步工作流密钥会分别核验。</p>
+            </div>
             <div class="dpr-task-picker-tools">
               <button id="arxiv-admin-daily-select-all-btn" class="arxiv-tool-btn" type="button">全选</button>
               <button id="arxiv-admin-daily-clear-all-btn" class="arxiv-tool-btn" type="button">取消全选</button>
@@ -1851,6 +1857,22 @@ window.SubscriptionsManager = (function () {
     quickRun30dStandardBtn = null;
     quickRunStartBtn = document.getElementById('arxiv-admin-quick-run-start-btn');
     quickRunOpenWorkflowPanelBtn = document.getElementById('arxiv-admin-open-workflow-panel-btn');
+    const scheduleOpen = document.getElementById('dpr-daily-schedule-open');
+    if (scheduleOpen) scheduleOpen.onclick = () => window.DPRWorkflowRunner?.open();
+    const showModelStatus = () => {
+      const el = document.getElementById('dpr-daily-model-status');
+      if (!el) return;
+      const config = window.DPRLLMConfigUtils?.resolveSummaryLLM(window.decoded_secret_private);
+      if (!config) return;
+      let sync = null;
+      try { sync = JSON.parse(window.sessionStorage.getItem('dpr-model-sync-status') || 'null'); } catch {}
+      el.textContent = `工作流模型：${config.model} · ${config.baseUrl}。${sync?.workflow === 'synced' ? '当前会话配置已保存，GitHub Secrets 已同步；下次运行生效。' : '已解锁浏览器配置；当前会话尚未核验 GitHub Secrets 同步状态。'}`;
+    };
+    showModelStatus();
+    if (!document.documentElement.dataset.modelStatusBound) {
+      document.documentElement.dataset.modelStatusBound = '1';
+      document.addEventListener('dpr-model-config-saved', showModelStatus);
+    }
     quickRunConferenceBtn = document.getElementById(
       'arxiv-admin-quick-run-conference-run-btn',
     );

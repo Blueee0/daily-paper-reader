@@ -513,7 +513,7 @@
       }
     } catch (e) {
       if (controller.signal.aborted) {
-        throw new Error('DeepSeek 连接测试超时，请稍后重试');
+        throw new Error('LLM 连接测试超时，请检查平台网络与浏览器跨域支持');
       }
       throw e;
     } finally {
@@ -617,6 +617,7 @@
   // 将总结模型 / workflow 所需的大模型配置写入 GitHub Secrets
   // 可选 progress 回调用于在 UI 中展示上传进度：progress(currentIndex, total, secretName)
   async function saveSummarizeSecretsToGithub(token, options, progress) {
+    let completed = 0;
     try {
       if (!window.sodium && typeof window.DPRLoadAssets === 'function') {
         await window.DPRLoadAssets([
@@ -765,6 +766,7 @@
       };
 
       const secrets = [
+        { name: 'SEMANTIC_SCHOLAR_API_KEY', value: normalizeText(safeOptions.semanticScholarApiKey || '') },
         { name: secretNameSummKey, value: summarizedApiKey },
         { name: secretNameSummUrl, value: summarizedBaseUrl },
         { name: secretNameSummModel, value: summarizedModel },
@@ -820,12 +822,13 @@
           }
         }
         await putSecret(item.name, encryptValue(item.value));
+        completed += 1;
       }
 
       return true;
     } catch (e) {
       console.error('[SECRET] 保存 GitHub Secrets 失败：', e);
-      return false;
+      throw new Error(`工作流密钥同步未完成（已写入 ${completed} 项），新旧配置可能并存；请勿启动任务，重新保存以完成同步。`);
     }
   }
 
@@ -1279,6 +1282,16 @@
               <div id="secret-setup-deepseek-models" style="font-size:13px;">
                 <select id="secret-setup-deepseek-model-select" class="secret-setup-select"></select>
               </div>
+              <details class="dpr-model-advanced">
+                <summary>高级设置：聊天模型单独配置</summary>
+                <label><input id="secret-chat-override" type="checkbox"> 聊天使用不同配置（工作流评分、总结和精读仍用上面的配置）</label>
+                <input id="secret-chat-key" type="password" autocomplete="off" placeholder="聊天 API Key">
+                <input id="secret-chat-url" type="url" placeholder="聊天 Base URL">
+                <input id="secret-chat-models" type="text" placeholder="聊天模型名，多个用逗号分隔">
+              </details>
+              <label class="dpr-secret-evidence-label" for="secret-evidence-key">Semantic Scholar API Key（可选）</label>
+              <input id="secret-evidence-key" type="password" autocomplete="off" placeholder="独立文献检索 Key；留空使用公共限额">
+              <p class="secret-setup-step2-note">文献检索在 GitHub Actions 中执行。浏览器连接测试不能验证工作流的网络环境。</p>
             </div>
           </div>
 
@@ -1336,6 +1349,22 @@
         </div>
       `;
 
+      const chatOverride = document.getElementById('secret-chat-override');
+      const chatKey = document.getElementById('secret-chat-key');
+      const chatUrl = document.getElementById('secret-chat-url');
+      const chatModelsInput = document.getElementById('secret-chat-models');
+      const evidenceKey = document.getElementById('secret-evidence-key');
+      chatOverride.checked = currentSecret.chatOverride != null ? !!currentSecret.chatOverride : !!(
+        currentChatEntry.apiKey && (currentChatEntry.apiKey !== currentSummaryLLM.apiKey ||
+          normalizeBaseUrlForStorage(currentChatEntry.baseUrl) !== normalizeBaseUrlForStorage(currentSummaryLLM.baseUrl))
+      );
+      chatKey.value = currentChatEntry.apiKey || '';
+      chatUrl.value = currentChatEntry.baseUrl || '';
+      chatModelsInput.value = (currentChatEntry.models || []).join(', ');
+      evidenceKey.value = (currentSecret.literatureSearch || {}).apiKey || '';
+      const syncChatOverride = () => [chatKey, chatUrl, chatModelsInput].forEach(input => { input.disabled = !chatOverride.checked; });
+      chatOverride.addEventListener('change', syncChatOverride);
+      syncChatOverride();
       const githubInput = document.getElementById('secret-setup-github-token');
       const githubVerifyBtn = document.getElementById('secret-setup-github-verify');
       const githubStatusEl = document.getElementById('secret-setup-github-status');
@@ -1878,8 +1907,20 @@
           return;
         }
 
+        if (chatOverride.checked) {
+          const models = sanitizeModelList([chatModelsInput.value], 3);
+          if (!chatKey.value.trim() || !chatUrl.value.trim() || !models.length) {
+            setErrorText('请填写完整的独立聊天配置。', '#c00'); return;
+          }
+          try {
+            await pingChatModels(models.map(model => ({ apiKey: chatKey.value.trim(), baseUrl: chatUrl.value.trim(), model })), deepseekStatusEl);
+          } catch (error) { setErrorText(error.message, '#c00'); return; }
+        }
         const nowIso = new Date().toISOString();
         const plainConfig = {
+          ...currentSecret,
+          chatOverride: chatOverride.checked,
+          literatureSearch: { provider: 'semantic-scholar', apiKey: evidenceKey.value.trim() },
           createdAt: currentSecret.createdAt || nowIso,
           updatedAt: nowIso,
           github: {
@@ -1908,9 +1949,9 @@
               },
           chatLLMs: [
             {
-              apiKey: providerDraft.summaryApiKey,
-              baseUrl: providerDraft.summaryBaseUrl,
-              models: providerDraft.chatModels,
+              apiKey: chatOverride.checked ? chatKey.value.trim() : providerDraft.summaryApiKey,
+              baseUrl: chatOverride.checked ? normalizeBaseUrlForStorage(chatUrl.value) : providerDraft.summaryBaseUrl,
+              models: chatOverride.checked ? sanitizeModelList([chatModelsInput.value], 3) : providerDraft.chatModels,
             },
           ],
         };
@@ -1923,6 +1964,7 @@
             const secretsOk = await saveSummarizeSecretsToGithub(
               githubToken,
               {
+                semanticScholarApiKey: evidenceKey.value.trim(),
                 providerType: providerDraft.providerType,
                 summarizedApiKey: providerDraft.summaryApiKey,
                 summarizedBaseUrl: providerDraft.summaryBaseUrl,
@@ -1982,11 +2024,15 @@
             const commitOk = await saveSecretPrivateToGithubRepo(githubToken, payload);
             if (!commitOk) {
               setErrorText(
-                '⚠️ 已生成本地 secret.private，但自动推送到 GitHub 仓库失败，请稍后手动提交或检查 Token/网络。',
+                '工作流 Secrets 已同步；当前会话配置已更新，但 secret.private 未同步到仓库，刷新后可能恢复旧配置。请保留下载备份并重新保存。',
                 '#c00',
               );
+              return;
             }
           }
+          plainConfig.syncStatus = { browser: 'saved', workflow: localOnly ? 'not-synced' : 'synced', at: nowIso };
+          try { window.sessionStorage.setItem('dpr-model-sync-status', JSON.stringify(plainConfig.syncStatus)); } catch {}
+          document.dispatchEvent(new CustomEvent('dpr-model-config-saved', { detail: plainConfig.syncStatus }));
 
           hide();
 
@@ -2016,7 +2062,7 @@
         } catch (e) {
           console.error(e);
           setErrorText(
-            '生成 secret.private 失败，请稍后重试或检查浏览器兼容性。',
+            e.message || '生成加密配置失败，请稍后重试。',
             '#c00',
           );
         } finally {
