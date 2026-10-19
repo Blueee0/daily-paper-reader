@@ -193,6 +193,17 @@ def generate_report(md_path, txt_path, client, *, max_attempts=2, refresh_eviden
             except (ValueError, RuntimeError, requests.RequestException) as exc:
                 # Provider exceptions can include request bodies or credentials in their text.
                 last_error = type(exc).__name__ if isinstance(exc, requests.RequestException) else str(exc)
+                if isinstance(exc, ValueError) and '十二节' in str(exc):
+                    # Keep a bounded, non-sensitive diagnostic in the run artifact so
+                    # a provider's heading dialect can be fixed without another blind
+                    # paid retry. The full model response is never persisted.
+                    preview = body[:1200] if 'body' in locals() else ''
+                    headings = [line[:240] for line in preview.splitlines()
+                                if line.lstrip().startswith(('#', '*')) or re.match(r'^\s*(?:第)?[一二三四五六七八九十\d]', line)]
+                    write_json(md_path.with_suffix('.report-diagnostics.json'), {
+                        'status': 'invalid-headings', 'message': str(exc),
+                        'headings': headings[:30],
+                    })
         if not report:
             write_json(md_path.with_suffix('.report-progress.json'), {'status': 'failed', 'message': str(last_error)})
             raise RuntimeError('精读报告校验失败：' + str(last_error))
