@@ -162,6 +162,15 @@ def test_chinese_number_headings_are_normalized():
     assert reports.validate_report(reports.normalize_report_headings(body_text), {'papers': []}) is None
 
 
+def test_spaced_and_part_headings_are_normalized():
+    body_text = '\n\n'.join(
+        f'### 第{i}节 第{i}节标题\n正文内容。' for i in range(1, 13)
+    ) + '\n\n（完）'
+    normalized = reports.normalize_report_headings(body_text)
+    assert [int(x) for x in __import__('re').findall(r'^## (\d+)\.', normalized, __import__('re').M)] == list(range(1, 13))
+    assert reports.validate_report(normalized, {'papers': []}) is None
+
+
 def test_request_failure_preserves_published_report_without_leaking_details(material):
     import requests
     path, client, _ = material

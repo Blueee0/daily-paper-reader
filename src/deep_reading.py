@@ -65,8 +65,10 @@ def _section_heading(line):
     value = str(line or '').strip()
     # Accept ##/### headings and bold-only headings, including Chinese list punctuation.
     match = re.match(
-        r'^\s*(?:#{1,6}\s*)?(?:\*\*)?((?:\d{1,2})|(?:十一|十二|十|[一二三四五六七八九]))'
-        r'\s*[.、．,:：)）-]\s*(.*?)(?:\*\*)?\s*$', value,
+        r'^\s*(?:#{1,6}\s*)?(?:\*\*)?'
+        r'(?:(?:第\s*)?((?:\d{1,2})|(?:十一|十二|十|[一二三四五六七八九]))'
+        r'\s*(?:[.、．,:：)）-]|章节|节|部分)?\s*(.*?))'
+        r'(?:\*\*)?\s*$', value,
     )
     if not match:
         return None
