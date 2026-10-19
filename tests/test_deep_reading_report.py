@@ -171,6 +171,12 @@ def test_spaced_and_part_headings_are_normalized():
     assert reports.validate_report(normalized, {'papers': []}) is None
 
 
+def test_plain_numbered_headings_are_normalized():
+    body_text = '\n\n'.join(f'{i}. 第{i}节标题\n正文内容。' for i in range(1, 13)) + '\n\n（完）'
+    normalized = reports.normalize_report_headings(body_text)
+    assert reports.validate_report(normalized, {'papers': []}) is None
+
+
 def test_request_failure_preserves_published_report_without_leaking_details(material):
     import requests
     path, client, _ = material
@@ -200,3 +206,10 @@ def test_large_citation_set_cannot_displace_references(tmp_path, monkeypatch):
     evidence = literature.collect_evidence({'id':'2601.12345v1','title':'Original'}, tmp_path / 'e.json')
     assert len(evidence['papers']) == 12
     assert {row['relation'] for row in evidence['papers']} == {'reference','citation','related_search'}
+
+
+def test_report_requests_visible_output_budget_without_thinking(material):
+    path, client, _ = material
+    reports.generate_report(path, path.with_suffix('.txt'), client)
+    assert client.kwargs['max_tokens'] == 24000
+    assert client.kwargs['thinking'] == {'type': 'disabled'}
