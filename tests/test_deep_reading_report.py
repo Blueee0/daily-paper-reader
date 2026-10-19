@@ -147,6 +147,21 @@ def test_empty_sections_are_not_complete_reports():
         reports.validate_report('\n'.join(f'## {i}. Title' for i in range(1, 13)) + '\n（完）', {'papers': []})
 
 
+def test_model_heading_variants_are_normalized():
+    body_text = '\n\n'.join(
+        f'### {i}、第{i}节\n正文内容。' for i in range(1, 13)
+    ) + '\n\n（完）'
+    normalized = reports.normalize_report_headings(body_text)
+    assert normalized.startswith('## 1. 第1节')
+    assert reports.validate_report(normalized, {'papers': []}) is None
+
+
+def test_chinese_number_headings_are_normalized():
+    labels = ['一','二','三','四','五','六','七','八','九','十','十一','十二']
+    body_text = '\n'.join(f'**{label}、第{idx}节**\n正文。' for idx, label in enumerate(labels, 1)) + '\n（完）'
+    assert reports.validate_report(reports.normalize_report_headings(body_text), {'papers': []}) is None
+
+
 def test_request_failure_preserves_published_report_without_leaking_details(material):
     import requests
     path, client, _ = material

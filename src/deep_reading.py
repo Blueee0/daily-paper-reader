@@ -54,11 +54,49 @@ def paper_identity(md_path, text):
             'year': str(meta.get('year') or meta.get('published') or meta.get('date') or '')}
 
 
+CN_NUMBERS = {
+    '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6,
+    '七': 7, '八': 8, '九': 9, '十': 10, '十一': 11, '十二': 12,
+}
+
+
+def _section_heading(line):
+    """Return (number, title) for common model-generated section heading styles."""
+    value = str(line or '').strip()
+    # Accept ##/### headings and bold-only headings, including Chinese list punctuation.
+    match = re.match(
+        r'^\s*(?:#{1,6}\s*)?(?:\*\*)?((?:\d{1,2})|(?:十一|十二|十|[一二三四五六七八九]))'
+        r'\s*[.、．,:：)）-]\s*(.*?)(?:\*\*)?\s*$', value,
+    )
+    if not match:
+        return None
+    raw, title = match.groups()
+    number = int(raw) if raw.isdigit() else CN_NUMBERS[raw]
+    # Avoid treating ordinary prose or numbered bullets as report sections.
+    if not value.startswith('#') and not value.startswith('**'):
+        return None
+    return number, title.strip()
+
+
+def normalize_report_headings(text):
+    """Normalize accepted section heading variants to the persisted report contract."""
+    lines = []
+    for line in str(text or '').splitlines():
+        heading = _section_heading(line)
+        if heading:
+            number, title = heading
+            lines.append(f'## {number}. {title}'.rstrip())
+        else:
+            lines.append(line)
+    return '\n'.join(lines).strip()
+
+
 def validate_report(text, evidence):
-    numbers = [int(x) for x in re.findall(r'^#{2,3}\s+(\d{1,2})[.、．\s]', text, re.M)]
+    text = normalize_report_headings(text)
+    numbers = [int(x) for x in re.findall(r'^##\s+(\d{1,2})\.\s', text, re.M)]
     if numbers != list(range(1, 13)):
         raise ValueError('精读报告必须完整且依次包含十二节')
-    sections = re.split(r'^#{2,3}\s+\d{1,2}[.、．\s][^\n]*\n', text, flags=re.M)[1:]
+    sections = re.split(r'^##\s+\d{1,2}\.\s[^\n]*\n', text, flags=re.M)[1:]
     if any(not section.replace('（完）', '').strip() for section in sections):
         raise ValueError('精读报告存在空白章节')
     if not text.rstrip().endswith('（完）'):
@@ -123,7 +161,7 @@ def generate_report(md_path, txt_path, client, *, max_attempts=2, refresh_eviden
                 response = client.chat(messages=messages)
                 if response.get('finish_reason') in ('length', 'content_filter'):
                     raise ValueError('模型报告被截断或过滤')
-                body = str(response.get('content') or '').strip()
+                body = normalize_report_headings(str(response.get('content') or '').strip())
                 validate_report(body, evidence)
                 now = datetime.now(timezone.utc).isoformat(timespec='seconds')
                 lines = [f'# Paper Reading: {paper["title"]}', '', f'- Paper: {paper["id"]}',
