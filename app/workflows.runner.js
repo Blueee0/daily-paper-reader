@@ -1370,6 +1370,7 @@ window.DPRWorkflowRunner = (function () {
   };
   const elapsedText = (start, end, now = Date.now()) => {
     if (!start || !Number.isFinite(Date.parse(start))) return '';
+    if (!Number.isFinite(end ? Date.parse(end) : now)) return '';
     const seconds = Math.max(0, Math.floor(((end ? Date.parse(end) : now) - Date.parse(start)) / 1000));
     return seconds < 60 ? `${seconds} 秒` : `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒`;
   };
@@ -1378,11 +1379,14 @@ window.DPRWorkflowRunner = (function () {
       completed_at: step.completed_at || (run.status === 'completed' ? job.completed_at || run.updated_at : null) })));
     const failed = steps.find(step => ['failure', 'timed_out'].includes(step.conclusion));
     const active = steps.find(step => step.status === 'in_progress');
-    const step = failed || active;
+    const cancelled = steps.find(step => step.conclusion === 'cancelled');
+    const step = failed || cancelled || active;
     const publish = steps.find(step => step.name === 'Verify existing Pages publication');
     const committed = steps.some(step => ['Commit results', 'Publish selected reports'].includes(step.name) && step.conclusion === 'success');
     const label = step ? (STEP_LABELS[step.name] || step.name) : '';
-    const duration = step ? elapsedText(step.started_at, step.completed_at) : '';
+    // A terminal run must never acquire an ever-growing duration when GitHub omits timestamps.
+    const duration = step && (run.status !== 'completed' || step.completed_at)
+      ? elapsedText(step.started_at, step.completed_at) : '';
     let publication = publish?.conclusion === 'success' ? '网站已核验更新' : committed ? '产物已提交，网站更新待核验' : '尚未确认发布新产物';
     return { label, duration, publication, failed: !!failed, startedAt: step?.started_at || '' };
   };

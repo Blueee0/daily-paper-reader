@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 
 import yaml
+import requests
 
 from literature_evidence import collect_evidence, fingerprint, read_json, write_json
 
@@ -44,17 +45,22 @@ def paper_identity(md_path, text):
     authors = meta.get('authors') or []
     if isinstance(authors, str):
         authors = [x.strip() for x in authors.split(',') if x.strip()]
-    return {'id': str(meta.get('paper_id') or meta.get('id') or Path(md_path).stem),
+    link = str(meta.get('link') or meta.get('paper_url') or meta.get('pdf_url') or meta.get('pdf') or '')
+    arxiv_id = re.search(r'(?:arxiv\.org/(?:abs|pdf)/|^)(\d{4}\.\d{4,5}(?:v\d+)?)', link)
+    return {'id': str(meta.get('paper_id') or meta.get('id') or (arxiv_id[1] if arxiv_id else Path(md_path).stem)),
             'title': meta.get('title') or meta.get('title_en') or Path(md_path).stem,
             'authors': authors, 'doi': meta.get('doi') or '',
-            'link': meta.get('link') or meta.get('paper_url') or meta.get('pdf_url') or meta.get('pdf') or '',
-            'year': meta.get('year') or meta.get('published') or meta.get('date') or ''}
+            'link': link,
+            'year': str(meta.get('year') or meta.get('published') or meta.get('date') or '')}
 
 
 def validate_report(text, evidence):
     numbers = [int(x) for x in re.findall(r'^#{2,3}\s+(\d{1,2})[.、．\s]', text, re.M)]
     if numbers != list(range(1, 13)):
         raise ValueError('精读报告必须完整且依次包含十二节')
+    sections = re.split(r'^#{2,3}\s+\d{1,2}[.、．\s][^\n]*\n', text, flags=re.M)[1:]
+    if any(not section.replace('（完）', '').strip() for section in sections):
+        raise ValueError('精读报告存在空白章节')
     if not text.rstrip().endswith('（完）'):
         raise ValueError('精读报告输出不完整')
     allowed = {row['id'] for row in evidence.get('papers', [])}
@@ -135,8 +141,9 @@ def generate_report(md_path, txt_path, client, *, max_attempts=2, refresh_eviden
                 report = '\n'.join(lines).rstrip() + '\n'
                 write_json(cache_path, {'status': 'complete', 'markdown': report})
                 break
-            except (ValueError, RuntimeError) as exc:
-                last_error = exc
+            except (ValueError, RuntimeError, requests.RequestException) as exc:
+                # Provider exceptions can include request bodies or credentials in their text.
+                last_error = type(exc).__name__ if isinstance(exc, requests.RequestException) else str(exc)
         if not report:
             write_json(md_path.with_suffix('.report-progress.json'), {'status': 'failed', 'message': str(last_error)})
             raise RuntimeError('精读报告校验失败：' + str(last_error))

@@ -133,3 +133,46 @@ def test_backfill_validates_all_selected_routes_before_work(tmp_path):
     assert module.resolve_routes('202610/19/paper', tmp_path) == [paper]
     with pytest.raises(ValueError): module.resolve_routes('../secret', tmp_path)
     with pytest.raises(ValueError): module.resolve_routes('202610/19/paper,202610/19/missing', tmp_path)
+
+
+def test_paper_identity_handles_legacy_arxiv_pdf_and_yaml_date():
+    paper = reports.paper_identity('attention-paper.md', '---\ntitle: Attention\ndate: 2017-06-12\npdf: https://arxiv.org/pdf/1706.03762v1\n---\n')
+    assert paper['id'] == '1706.03762v1'
+    assert paper['year'] == '2017-06-12'
+    literature.fingerprint(paper)
+
+
+def test_empty_sections_are_not_complete_reports():
+    with pytest.raises(ValueError, match='空白'):
+        reports.validate_report('\n'.join(f'## {i}. Title' for i in range(1, 13)) + '\n（完）', {'papers': []})
+
+
+def test_request_failure_preserves_published_report_without_leaking_details(material):
+    import requests
+    path, client, _ = material
+    first = reports.generate_report(path, path.with_suffix('.txt'), client)
+    client.model = 'new-model'
+    client.chat.side_effect = requests.Timeout('sensitive-provider-error')
+    with pytest.raises(RuntimeError):
+        reports.generate_report(path, path.with_suffix('.txt'), client)
+    assert reports.report_paths(path)[0].read_text(encoding='utf-8') == first
+    progress = path.with_suffix('.report-progress.json').read_text(encoding='utf-8')
+    assert 'failed' in progress and 'sensitive-provider-error' not in progress
+
+
+def test_large_citation_set_cannot_displace_references(tmp_path, monkeypatch):
+    monkeypatch.setattr(literature, 'CACHE_ROOT', tmp_path / 'cache')
+    def item(number):
+        return {'paperId': str(number), 'title': f'Related {number}', 'externalIds': {}}
+    def get(url, **kwargs):
+        if url.endswith('/references'):
+            return {'data': [{'citedPaper': item(i)} for i in range(1, 13)]}
+        if url.endswith('/citations'):
+            return {'data': [{'citingPaper': item(i)} for i in range(21, 33)]}
+        if url.endswith('/search'):
+            return {'data': [item(i) for i in range(41, 47)]}
+        return {'paperId': 'source', 'title': 'Original'}
+    monkeypatch.setattr(literature, '_get', get)
+    evidence = literature.collect_evidence({'id':'2601.12345v1','title':'Original'}, tmp_path / 'e.json')
+    assert len(evidence['papers']) == 12
+    assert {row['relation'] for row in evidence['papers']} == {'reference','citation','related_search'}

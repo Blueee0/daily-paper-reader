@@ -120,4 +120,8 @@ assert.equal(failed.label, '模型相关性评分');
 assert.equal(failed.duration, '1 分 20 秒');
 const committed = summarizeRunSteps({}, [{steps:[{name:'Commit results',conclusion:'success'},{name:'Verify existing Pages publication',status:'queued'}]}]);
 assert.equal(committed.publication, '产物已提交，网站更新待核验');
+const cancelled = summarizeRunSteps({status:'completed',conclusion:'cancelled'}, [{steps:[{name:'Run Retrieval and Embedding',status:'in_progress',started_at:'2026-10-15T00:00:00Z'}]}]);
+assert.equal(cancelled.duration, '', 'missing terminal timestamps must not tick forever');
+const stopped = summarizeRunSteps({status:'completed',conclusion:'cancelled',updated_at:'2026-10-15T00:02:00Z'}, [{steps:[{name:'Run Retrieval and Embedding',status:'completed',conclusion:'cancelled',started_at:'2026-10-15T00:00:00Z'}]}]);
+assert.equal(stopped.duration, '2 分 0 秒');
 console.log('native timezone, DST, run stages and publication tests passed');

@@ -72,7 +72,7 @@ def collect_evidence(paper, cache_path, *, session=None, refresh=False):
     """At most 3 search queries, 12 deduplicated records, and 12 DOI verifications.
 
     References/citations are fetched only for a confidently identified source paper.
-    Partial results remain usable and labelled, but are not cached as complete.
+    Saved partial snapshots are reusable and retain their partial status.
     """
     identity = {key: paper.get(key) for key in ('id', 'title', 'doi', 'authors')}
     key = fingerprint({'version': 1, 'paper': identity, 'queries': 3, 'limit': 12})
@@ -117,12 +117,19 @@ def collect_evidence(paper, cache_path, *, session=None, refresh=False):
             if not source and exact_title and _authors_overlap(paper.get('authors') or [], item.get('authors') or []):
                 source = item
             candidates.append((item, 'related_search'))
+    lanes = {'related_search': candidates, 'reference': [], 'citation': []}
     if source and source.get('paperId'):
         for endpoint, field, relation in [('references', 'citedPaper', 'reference'), ('citations', 'citingPaper', 'citation')]:
             data = request('/paper/' + quote(source['paperId'], safe='') + '/' + endpoint,
                            {'limit': 12, 'fields': FIELDS})
             rows = (data or {}).get('data', [])
-            candidates = [(row[field], relation) for row in rows if row.get(field)] + candidates
+            lanes[relation] = [(row[field], relation) for row in rows if row.get(field)]
+    # Interleave evidence types so a popular paper's citations cannot crowd out its references.
+    candidates = []
+    for index in range(max((len(lane) for lane in lanes.values()), default=0)):
+        for relation in ('reference', 'citation', 'related_search'):
+            if index < len(lanes[relation]):
+                candidates.append(lanes[relation][index])
     seen = set()
     for item, relation in candidates:
         if len(result['papers']) >= 12:
